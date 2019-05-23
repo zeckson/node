@@ -7,19 +7,19 @@
 
 #include "src/objects/map.h"
 
-#include "src/field-type.h"
 #include "src/heap/heap-write-barrier-inl.h"
-#include "src/layout-descriptor-inl.h"
 #include "src/objects-inl.h"
 #include "src/objects/api-callbacks-inl.h"
 #include "src/objects/cell-inl.h"
 #include "src/objects/descriptor-array-inl.h"
+#include "src/objects/field-type.h"
 #include "src/objects/instance-type-inl.h"
+#include "src/objects/layout-descriptor-inl.h"
+#include "src/objects/property.h"
 #include "src/objects/prototype-info-inl.h"
 #include "src/objects/shared-function-info.h"
 #include "src/objects/templates-inl.h"
-#include "src/property.h"
-#include "src/transitions.h"
+#include "src/objects/transitions-inl.h"
 
 // Has to be the last include (doesn't have include guards):
 #include "src/objects/object-macros.h"
@@ -31,17 +31,18 @@ OBJECT_CONSTRUCTORS_IMPL(Map, HeapObject)
 CAST_ACCESSOR(Map)
 
 DescriptorArray Map::instance_descriptors() const {
-  return DescriptorArray::cast(READ_FIELD(*this, kDescriptorsOffset));
+  return DescriptorArray::cast(READ_FIELD(*this, kInstanceDescriptorsOffset));
 }
 
 DescriptorArray Map::synchronized_instance_descriptors() const {
-  return DescriptorArray::cast(ACQUIRE_READ_FIELD(*this, kDescriptorsOffset));
+  return DescriptorArray::cast(
+      ACQUIRE_READ_FIELD(*this, kInstanceDescriptorsOffset));
 }
 
 void Map::set_synchronized_instance_descriptors(DescriptorArray value,
                                                 WriteBarrierMode mode) {
-  RELEASE_WRITE_FIELD(*this, kDescriptorsOffset, value);
-  CONDITIONAL_WRITE_BARRIER(*this, kDescriptorsOffset, value, mode);
+  RELEASE_WRITE_FIELD(*this, kInstanceDescriptorsOffset, value);
+  CONDITIONAL_WRITE_BARRIER(*this, kInstanceDescriptorsOffset, value, mode);
 }
 
 // A freshly allocated layout descriptor can be set on an existing map.
@@ -54,7 +55,11 @@ SYNCHRONIZED_ACCESSORS_CHECKED(Map, layout_descriptor, LayoutDescriptor,
 WEAK_ACCESSORS(Map, raw_transitions, kTransitionsOrPrototypeInfoOffset)
 
 // |bit_field| fields.
-BIT_FIELD_ACCESSORS(Map, bit_field, has_non_instance_prototype,
+// Concurrent access to |has_prototype_slot| and |has_non_instance_prototype|
+// is explicitly whitelisted here. The former is never modified after the map
+// is setup but it's being read by concurrent marker when pointer compression
+// is enabled. The latter bit can be modified on a live objects.
+BIT_FIELD_ACCESSORS(Map, relaxed_bit_field, has_non_instance_prototype,
                     Map::HasNonInstancePrototypeBit)
 BIT_FIELD_ACCESSORS(Map, bit_field, is_callable, Map::IsCallableBit)
 BIT_FIELD_ACCESSORS(Map, bit_field, has_named_interceptor,
@@ -65,20 +70,20 @@ BIT_FIELD_ACCESSORS(Map, bit_field, is_undetectable, Map::IsUndetectableBit)
 BIT_FIELD_ACCESSORS(Map, bit_field, is_access_check_needed,
                     Map::IsAccessCheckNeededBit)
 BIT_FIELD_ACCESSORS(Map, bit_field, is_constructor, Map::IsConstructorBit)
-BIT_FIELD_ACCESSORS(Map, bit_field, has_prototype_slot,
+BIT_FIELD_ACCESSORS(Map, relaxed_bit_field, has_prototype_slot,
                     Map::HasPrototypeSlotBit)
 
 // |bit_field2| fields.
 BIT_FIELD_ACCESSORS(Map, bit_field2, is_extensible, Map::IsExtensibleBit)
 BIT_FIELD_ACCESSORS(Map, bit_field2, is_prototype_map, Map::IsPrototypeMapBit)
-BIT_FIELD_ACCESSORS(Map, bit_field2, is_in_retained_map_list,
-                    Map::IsInRetainedMapListBit)
+BIT_FIELD_ACCESSORS(Map, bit_field2, has_hidden_prototype,
+                    Map::HasHiddenPrototypeBit)
 
 // |bit_field3| fields.
 BIT_FIELD_ACCESSORS(Map, bit_field3, owns_descriptors, Map::OwnsDescriptorsBit)
-BIT_FIELD_ACCESSORS(Map, bit_field3, has_hidden_prototype,
-                    Map::HasHiddenPrototypeBit)
 BIT_FIELD_ACCESSORS(Map, bit_field3, is_deprecated, Map::IsDeprecatedBit)
+BIT_FIELD_ACCESSORS(Map, bit_field3, is_in_retained_map_list,
+                    Map::IsInRetainedMapListBit)
 BIT_FIELD_ACCESSORS(Map, bit_field3, is_migration_target,
                     Map::IsMigrationTargetBit)
 BIT_FIELD_ACCESSORS(Map, bit_field3, is_immutable_proto,
@@ -118,19 +123,16 @@ bool Map::CanHaveFastTransitionableElementsKind() const {
 
 // static
 void Map::GeneralizeIfCanHaveTransitionableFastElementsKind(
-    Isolate* isolate, InstanceType instance_type, PropertyConstness* constness,
+    Isolate* isolate, InstanceType instance_type,
     Representation* representation, Handle<FieldType>* field_type) {
   if (CanHaveFastTransitionableElementsKind(instance_type)) {
     // We don't support propagation of field generalization through elements
     // kind transitions because they are inserted into the transition tree
     // before field transitions. In order to avoid complexity of handling
     // such a case we ensure that all maps with transitionable elements kinds
-    // have the most general field type.
-    if (representation->IsHeapObject()) {
-      // The field type is either already Any or should become Any if it was
-      // something else.
-      *field_type = FieldType::Any(isolate);
-    }
+    // have the most general field representation and type.
+    *field_type = FieldType::Any(isolate);
+    *representation = Representation::Tagged();
   }
 }
 
@@ -289,12 +291,11 @@ Handle<Map> Map::AddMissingTransitionsForTesting(
 }
 
 InstanceType Map::instance_type() const {
-  return static_cast<InstanceType>(
-      READ_UINT16_FIELD(*this, kInstanceTypeOffset));
+  return static_cast<InstanceType>(ReadField<uint16_t>(kInstanceTypeOffset));
 }
 
 void Map::set_instance_type(InstanceType value) {
-  WRITE_UINT16_FIELD(*this, kInstanceTypeOffset, value);
+  WriteField<uint16_t>(kInstanceTypeOffset, value);
 }
 
 int Map::UnusedPropertyFields() const {
@@ -416,18 +417,24 @@ void Map::AccountAddedOutOfObjectPropertyField(int unused_in_property_array) {
   DCHECK_EQ(unused_in_property_array, UnusedPropertyFields());
 }
 
-byte Map::bit_field() const { return READ_BYTE_FIELD(*this, kBitFieldOffset); }
+byte Map::bit_field() const { return ReadField<byte>(kBitFieldOffset); }
 
 void Map::set_bit_field(byte value) {
-  WRITE_BYTE_FIELD(*this, kBitFieldOffset, value);
+  WriteField<byte>(kBitFieldOffset, value);
 }
 
-byte Map::bit_field2() const {
-  return READ_BYTE_FIELD(*this, kBitField2Offset);
+byte Map::relaxed_bit_field() const {
+  return RELAXED_READ_BYTE_FIELD(*this, kBitFieldOffset);
 }
+
+void Map::set_relaxed_bit_field(byte value) {
+  RELAXED_WRITE_BYTE_FIELD(*this, kBitFieldOffset, value);
+}
+
+byte Map::bit_field2() const { return ReadField<byte>(kBitField2Offset); }
 
 void Map::set_bit_field2(byte value) {
-  WRITE_BYTE_FIELD(*this, kBitField2Offset, value);
+  WriteField<byte>(kBitField2Offset, value);
 }
 
 bool Map::is_abandoned_prototype_map() const {
@@ -486,6 +493,18 @@ bool Map::has_fixed_typed_array_elements() const {
 
 bool Map::has_dictionary_elements() const {
   return IsDictionaryElementsKind(elements_kind());
+}
+
+bool Map::has_frozen_or_sealed_elements() const {
+  return IsFrozenOrSealedElementsKind(elements_kind());
+}
+
+bool Map::has_sealed_elements() const {
+  return IsSealedElementsKind(elements_kind());
+}
+
+bool Map::has_frozen_elements() const {
+  return IsFrozenElementsKind(elements_kind());
 }
 
 void Map::set_is_dictionary_map(bool value) {
@@ -552,9 +571,11 @@ bool Map::IsPrimitiveMap() const {
   return instance_type() <= LAST_PRIMITIVE_TYPE;
 }
 
-Object Map::prototype() const { return READ_FIELD(*this, kPrototypeOffset); }
+HeapObject Map::prototype() const {
+  return HeapObject::cast(READ_FIELD(*this, kPrototypeOffset));
+}
 
-void Map::set_prototype(Object value, WriteBarrierMode mode) {
+void Map::set_prototype(HeapObject value, WriteBarrierMode mode) {
   DCHECK(value->IsNull() || value->IsJSReceiver());
   WRITE_FIELD(*this, kPrototypeOffset, value);
   CONDITIONAL_WRITE_BARRIER(*this, kPrototypeOffset, value, mode);
@@ -666,10 +687,10 @@ void Map::AppendDescriptor(Isolate* isolate, Descriptor* desc) {
 #endif
 }
 
-Object Map::GetBackPointer() const {
+HeapObject Map::GetBackPointer() const {
   Object object = constructor_or_backpointer();
   if (object->IsMap()) {
-    return object;
+    return Map::cast(object);
   }
   return GetReadOnlyRoots().undefined_value();
 }

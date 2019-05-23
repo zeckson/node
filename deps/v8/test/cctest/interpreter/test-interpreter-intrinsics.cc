@@ -4,7 +4,7 @@
 
 #include "src/v8.h"
 
-#include "src/api-inl.h"
+#include "src/api/api-inl.h"
 #include "src/heap/heap-inl.h"
 #include "src/interpreter/interpreter-intrinsics.h"
 #include "src/objects-inl.h"
@@ -93,37 +93,6 @@ TEST(IsArray) {
   CHECK_EQ(*factory->false_value(),
            *helper.Invoke(helper.NewObject("'string'")));
   CHECK_EQ(*factory->false_value(), *helper.Invoke(helper.NewObject("42")));
-}
-
-TEST(IsTypedArray) {
-  HandleAndZoneScope handles;
-
-  InvokeIntrinsicHelper helper(handles.main_isolate(), handles.main_zone(),
-                               Runtime::kInlineIsTypedArray);
-  Factory* factory = handles.main_isolate()->factory();
-
-  CHECK_EQ(*factory->false_value(),
-           *helper.Invoke(helper.NewObject("new Date()")));
-  CHECK_EQ(*factory->false_value(),
-           *helper.Invoke(helper.NewObject("(function() {})")));
-  CHECK_EQ(*factory->false_value(), *helper.Invoke(helper.NewObject("([1])")));
-  CHECK_EQ(*factory->false_value(), *helper.Invoke(helper.NewObject("({})")));
-  CHECK_EQ(*factory->false_value(), *helper.Invoke(helper.NewObject("(/x/)")));
-  CHECK_EQ(*factory->false_value(), *helper.Invoke(helper.Undefined()));
-  CHECK_EQ(*factory->false_value(), *helper.Invoke(helper.Null()));
-  CHECK_EQ(*factory->false_value(),
-           *helper.Invoke(helper.NewObject("'string'")));
-  CHECK_EQ(*factory->false_value(), *helper.Invoke(helper.NewObject("42")));
-
-  CHECK_EQ(
-      *factory->true_value(),
-      *helper.Invoke(helper.NewObject("new Uint8Array(new ArrayBuffer(1));")));
-  CHECK_EQ(
-      *factory->true_value(),
-      *helper.Invoke(helper.NewObject("new Uint16Array(new ArrayBuffer(2));")));
-  CHECK_EQ(
-      *factory->true_value(),
-      *helper.Invoke(helper.NewObject("new Int32Array(new ArrayBuffer(4));")));
 }
 
 TEST(IsSmi) {

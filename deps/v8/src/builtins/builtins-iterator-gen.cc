@@ -9,14 +9,14 @@
 #include "src/builtins/builtins-string-gen.h"
 #include "src/builtins/builtins-utils-gen.h"
 #include "src/builtins/builtins.h"
-#include "src/code-stub-assembler.h"
+#include "src/codegen/code-stub-assembler.h"
 #include "src/heap/factory-inl.h"
-#include "torque-generated/builtins-base-from-dsl-gen.h"
+#include "torque-generated/builtins-base-gen-tq.h"
 
 namespace v8 {
 namespace internal {
 
-typedef IteratorBuiltinsFromDSLAssembler::IteratorRecord IteratorRecord;
+typedef TorqueGeneratedIteratorBuiltinsAssembler::IteratorRecord IteratorRecord;
 
 using compiler::Node;
 

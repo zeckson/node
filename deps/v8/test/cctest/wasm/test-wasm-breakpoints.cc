@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/assembler-inl.h"
+#include "src/codegen/assembler-inl.h"
 #include "src/debug/debug-interface.h"
-#include "src/frames-inl.h"
-#include "src/property-descriptor.h"
+#include "src/execution/frames-inl.h"
+#include "src/objects/property-descriptor.h"
 #include "src/utils.h"
 #include "src/wasm/wasm-objects-inl.h"
 

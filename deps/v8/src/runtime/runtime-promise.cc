@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/api-inl.h"
-#include "src/arguments-inl.h"
-#include "src/counters.h"
+#include "src/api/api-inl.h"
 #include "src/debug/debug.h"
-#include "src/elements.h"
-#include "src/microtask-queue.h"
+#include "src/execution/arguments-inl.h"
+#include "src/execution/microtask-queue.h"
+#include "src/logging/counters.h"
 #include "src/objects-inl.h"
+#include "src/objects/elements.h"
 #include "src/objects/heap-object-inl.h"
 #include "src/objects/js-promise-inl.h"
 #include "src/objects/oddball-inl.h"

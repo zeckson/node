@@ -7,9 +7,9 @@
 
 #include "src/v8.h"
 
-#include "src/api.h"
-#include "src/isolate.h"
-#include "src/vm-state.h"
+#include "src/api/api.h"
+#include "src/execution/isolate.h"
+#include "src/execution/vm-state.h"
 #include "test/cctest/cctest.h"
 
 template <typename T>

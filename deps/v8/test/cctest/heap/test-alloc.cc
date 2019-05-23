@@ -28,12 +28,12 @@
 #include "src/v8.h"
 #include "test/cctest/cctest.h"
 
-#include "src/accessors.h"
-#include "src/api-inl.h"
+#include "src/api/api-inl.h"
+#include "src/builtins/accessors.h"
 #include "src/heap/heap-inl.h"
 #include "src/objects-inl.h"
 #include "src/objects/api-callbacks.h"
-#include "src/property.h"
+#include "src/objects/property.h"
 #include "test/cctest/heap/heap-tester.h"
 #include "test/cctest/heap/heap-utils.h"
 

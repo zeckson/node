@@ -4,20 +4,20 @@
 
 #include "src/keys.h"
 
-#include "src/api-arguments-inl.h"
-#include "src/elements-inl.h"
-#include "src/field-index-inl.h"
+#include "src/api/api-arguments-inl.h"
+#include "src/execution/isolate-inl.h"
 #include "src/handles-inl.h"
 #include "src/heap/factory.h"
 #include "src/identity-map.h"
-#include "src/isolate-inl.h"
 #include "src/objects-inl.h"
 #include "src/objects/api-callbacks.h"
+#include "src/objects/elements-inl.h"
+#include "src/objects/field-index-inl.h"
 #include "src/objects/hash-table-inl.h"
 #include "src/objects/module-inl.h"
 #include "src/objects/ordered-hash-table-inl.h"
-#include "src/property-descriptor.h"
-#include "src/prototype.h"
+#include "src/objects/property-descriptor.h"
+#include "src/objects/prototype.h"
 
 namespace v8 {
 namespace internal {
@@ -448,7 +448,9 @@ FastKeyAccumulator::GetOwnKeysWithUninitializedEnumCache() {
   Handle<JSObject> object = Handle<JSObject>::cast(receiver_);
   // Uninitalized enum cache
   Map map = object->map();
-  if (object->elements()->length() != 0) {
+  if (object->elements() != ReadOnlyRoots(isolate_).empty_fixed_array() &&
+      object->elements() !=
+          ReadOnlyRoots(isolate_).empty_slow_element_dictionary()) {
     // Assume that there are elements.
     return MaybeHandle<FixedArray>();
   }

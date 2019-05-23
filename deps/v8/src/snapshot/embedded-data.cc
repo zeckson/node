@@ -4,8 +4,8 @@
 
 #include "src/snapshot/embedded-data.h"
 
-#include "src/assembler-inl.h"
 #include "src/callable.h"
+#include "src/codegen/assembler-inl.h"
 #include "src/objects-inl.h"
 #include "src/snapshot/snapshot.h"
 
@@ -101,7 +101,6 @@ bool BuiltinAliasesOffHeapTrampolineRegister(Isolate* isolate, Code code) {
     // Bytecode handlers will only ever be used by the interpreter and so there
     // will never be a need to use trampolines with them.
     case Builtins::BCH:
-    case Builtins::API:
     case Builtins::ASM:
       // TODO(jgruber): Extend checks to remaining kinds.
       return false;
@@ -288,6 +287,19 @@ uint32_t EmbeddedData::InstructionSizeOfBuiltin(int i) const {
   DCHECK(Builtins::IsBuiltinId(i));
   const struct Metadata* metadata = Metadata();
   return metadata[i].instructions_length;
+}
+
+Address EmbeddedData::InstructionStartOfBytecodeHandlers() const {
+  return InstructionStartOfBuiltin(Builtins::kFirstBytecodeHandler);
+}
+
+Address EmbeddedData::InstructionEndOfBytecodeHandlers() const {
+  STATIC_ASSERT(Builtins::kFirstBytecodeHandler + kNumberOfBytecodeHandlers +
+                    2 * kNumberOfWideBytecodeHandlers ==
+                Builtins::builtin_count);
+  int lastBytecodeHandler = Builtins::builtin_count - 1;
+  return InstructionStartOfBuiltin(lastBytecodeHandler) +
+         InstructionSizeOfBuiltin(lastBytecodeHandler);
 }
 
 size_t EmbeddedData::CreateEmbeddedBlobHash() const {

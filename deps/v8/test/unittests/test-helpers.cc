@@ -5,10 +5,10 @@
 #include "test/unittests/test-helpers.h"
 
 #include "include/v8.h"
-#include "src/api.h"
+#include "src/api/api.h"
 #include "src/base/template-utils.h"
+#include "src/execution/isolate.h"
 #include "src/handles.h"
-#include "src/isolate.h"
 #include "src/objects-inl.h"
 #include "src/objects.h"
 #include "src/parsing/scanner-character-streams.h"

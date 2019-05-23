@@ -7,8 +7,8 @@
 #include "src/compiler/common-operator.h"
 #include "src/compiler/type-cache.h"
 #include "src/compiler/types.h"
+#include "src/execution/isolate.h"
 #include "src/heap/factory.h"
-#include "src/isolate.h"
 
 #include "src/objects-inl.h"
 
@@ -1185,6 +1185,13 @@ Type OperationTyper::SameValue(Type lhs, Type rhs) {
     return singleton_false();
   }
   return Type::Boolean();
+}
+
+Type OperationTyper::SameValueNumbersOnly(Type lhs, Type rhs) {
+  // SameValue and SamevalueNumbersOnly only differ in treatment of
+  // strings and biginits. Since the SameValue typer does not do anything
+  // special about strings or bigints, we can just use it here.
+  return SameValue(lhs, rhs);
 }
 
 Type OperationTyper::StrictEqual(Type lhs, Type rhs) {

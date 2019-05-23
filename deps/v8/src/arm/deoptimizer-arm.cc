@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/assembler-inl.h"
-#include "src/deoptimizer.h"
-#include "src/macro-assembler.h"
+#include "src/codegen/assembler-inl.h"
+#include "src/codegen/macro-assembler.h"
+#include "src/codegen/register-configuration.h"
+#include "src/codegen/safepoint-table.h"
+#include "src/deoptimizer/deoptimizer.h"
 #include "src/objects-inl.h"
-#include "src/register-configuration.h"
-#include "src/safepoint-table.h"
 
 namespace v8 {
 namespace internal {
@@ -44,6 +44,8 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
     // Push registers d0-d15, and possibly d16-d31, on the stack.
     // If d16-d31 are not pushed, decrease the stack pointer instead.
     __ vstm(db_w, sp, d16, d31, ne);
+    // Okay to not call AllocateStackSpace here because the size is a known
+    // small number and we need to use condition codes.
     __ sub(sp, sp, Operand(16 * kDoubleSize), LeaveCC, eq);
     __ vstm(db_w, sp, d0, d15);
 

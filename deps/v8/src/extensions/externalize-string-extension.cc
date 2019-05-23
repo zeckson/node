@@ -4,9 +4,9 @@
 
 #include "src/extensions/externalize-string-extension.h"
 
-#include "src/api-inl.h"
+#include "src/api/api-inl.h"
+#include "src/execution/isolate.h"
 #include "src/handles.h"
-#include "src/isolate.h"
 #include "src/objects-inl.h"
 
 namespace v8 {

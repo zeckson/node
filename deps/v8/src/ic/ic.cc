@@ -4,33 +4,36 @@
 
 #include "src/ic/ic.h"
 
-#include "src/accessors.h"
-#include "src/api-arguments-inl.h"
-#include "src/api.h"
-#include "src/arguments-inl.h"
+#include "src/api/api-arguments-inl.h"
+#include "src/api/api.h"
 #include "src/ast/ast.h"
 #include "src/base/bits.h"
-#include "src/code-factory.h"
-#include "src/conversions.h"
-#include "src/execution.h"
-#include "src/field-type.h"
-#include "src/frames-inl.h"
+#include "src/builtins/accessors.h"
+#include "src/codegen/code-factory.h"
+#include "src/execution/arguments-inl.h"
+#include "src/execution/execution.h"
+#include "src/execution/frames-inl.h"
+#include "src/execution/isolate-inl.h"
 #include "src/handles-inl.h"
 #include "src/ic/call-optimization.h"
 #include "src/ic/handler-configuration-inl.h"
 #include "src/ic/ic-inl.h"
 #include "src/ic/ic-stats.h"
 #include "src/ic/stub-cache.h"
-#include "src/isolate-inl.h"
+#include "src/numbers/conversions.h"
 #include "src/objects/api-callbacks.h"
 #include "src/objects/data-handler-inl.h"
+#include "src/objects/field-type.h"
 #include "src/objects/hash-table-inl.h"
 #include "src/objects/heap-number-inl.h"
 #include "src/objects/js-array-inl.h"
 #include "src/objects/module-inl.h"
 #include "src/objects/struct-inl.h"
-#include "src/prototype.h"
-#include "src/runtime-profiler.h"
+#ifdef V8_TRACE_FEEDBACK_UPDATES
+#include "src/ostreams.h"
+#endif  // V8_TRACE_FEEDBACK_UPDATES
+#include "src/execution/runtime-profiler.h"
+#include "src/objects/prototype.h"
 #include "src/runtime/runtime-utils.h"
 #include "src/runtime/runtime.h"
 #include "src/tracing/trace-event.h"
@@ -42,7 +45,7 @@ namespace internal {
 char IC::TransitionMarkFromState(IC::State state) {
   switch (state) {
     case NO_FEEDBACK:
-      UNREACHABLE();
+      return 'X';
     case UNINITIALIZED:
       return '0';
     case PREMONOMORPHIC:
@@ -70,32 +73,31 @@ const char* GetModifier(KeyedAccessLoadMode mode) {
 
 const char* GetModifier(KeyedAccessStoreMode mode) {
   switch (mode) {
-    case STORE_NO_TRANSITION_HANDLE_COW:
+    case STORE_HANDLE_COW:
       return ".COW";
-    case STORE_AND_GROW_NO_TRANSITION_HANDLE_COW:
+    case STORE_AND_GROW_HANDLE_COW:
       return ".STORE+COW";
-    case STORE_NO_TRANSITION_IGNORE_OUT_OF_BOUNDS:
+    case STORE_IGNORE_OUT_OF_BOUNDS:
       return ".IGNORE_OOB";
-    default:
-      break;
+    case STANDARD_STORE:
+      return "";
   }
-  DCHECK(!IsCOWHandlingStoreMode(mode));
-  return IsGrowStoreMode(mode) ? ".GROW" : "";
+  UNREACHABLE();
 }
 
 }  // namespace
 
 void IC::TraceIC(const char* type, Handle<Object> name) {
-  if (FLAG_ic_stats) {
-    if (AddressIsDeoptimizedCode()) return;
-    State new_state = nexus()->ic_state();
-    TraceIC(type, name, state(), new_state);
-  }
+  if (V8_LIKELY(!TracingFlags::is_ic_stats_enabled())) return;
+  if (HostIsDeoptimizedCode()) return;
+  State new_state =
+      (state() == NO_FEEDBACK) ? NO_FEEDBACK : nexus()->ic_state();
+  TraceIC(type, name, state(), new_state);
 }
 
 void IC::TraceIC(const char* type, Handle<Object> name, State old_state,
                  State new_state) {
-  if (V8_LIKELY(!FLAG_ic_stats)) return;
+  if (V8_LIKELY(!TracingFlags::is_ic_stats_enabled())) return;
 
   Map map;
   if (!receiver_map().is_null()) {
@@ -103,7 +105,9 @@ void IC::TraceIC(const char* type, Handle<Object> name, State old_state,
   }
 
   const char* modifier = "";
-  if (IsKeyedLoadIC()) {
+  if (state() == NO_FEEDBACK) {
+    modifier = "";
+  } else if (IsKeyedLoadIC()) {
     KeyedAccessLoadMode mode = nexus()->GetKeyedAccessLoadMode();
     modifier = GetModifier(mode);
   } else if (IsKeyedStoreIC() || IsStoreInArrayLiteralICKind(kind())) {
@@ -113,7 +117,7 @@ void IC::TraceIC(const char* type, Handle<Object> name, State old_state,
 
   bool keyed_prefix = is_keyed() && !IsStoreInArrayLiteralICKind(kind());
 
-  if (!(FLAG_ic_stats &
+  if (!(TracingFlags::ic_stats.load(std::memory_order_relaxed) &
         v8::tracing::TracingCategoryObserver::ENABLED_BY_TRACING)) {
     LOG(isolate(), ICEvent(type, keyed_prefix, map, *name,
                            TransitionMarkFromState(old_state),
@@ -699,12 +703,12 @@ void IC::PatchCache(Handle<Name> name, const MaybeObjectHandle& handler) {
       break;
     case GENERIC:
       UNREACHABLE();
-      break;
   }
 }
 
 void LoadIC::UpdateCaches(LookupIterator* lookup) {
-  if (state() == UNINITIALIZED && !IsLoadGlobalIC()) {
+  if (!FLAG_lazy_feedback_allocation && state() == UNINITIALIZED &&
+      !IsLoadGlobalIC()) {
     // This is the first time we execute this inline cache. Set the target to
     // the pre monomorphic stub to delay setting the monomorphic state.
     TRACE_HANDLER_STATS(isolate(), LoadIC_Premonomorphic);
@@ -762,7 +766,7 @@ void IC::UpdateMegamorphicCache(Handle<Map> map, Handle<Name> name,
 
 void IC::TraceHandlerCacheHitStats(LookupIterator* lookup) {
   DCHECK_EQ(LookupIterator::ACCESSOR, lookup->state());
-  if (V8_LIKELY(!FLAG_runtime_stats)) return;
+  if (V8_LIKELY(!TracingFlags::is_runtime_stats_enabled())) return;
   if (IsAnyLoad() || IsAnyHas()) {
     TRACE_HANDLER_STATS(isolate(), LoadIC_HandlerCacheHit_Accessor);
   } else {
@@ -868,8 +872,10 @@ Handle<Object> LoadIC::ComputeHandler(LookupIterator* lookup) {
           return slow_stub();
         }
 
-        if (getter->IsFunctionTemplateInfo() &&
-            FunctionTemplateInfo::cast(*getter)->BreakAtEntry()) {
+        if ((getter->IsFunctionTemplateInfo() &&
+             FunctionTemplateInfo::cast(*getter)->BreakAtEntry()) ||
+            (getter->IsJSFunction() &&
+             JSFunction::cast(*getter)->shared()->BreakAtEntry())) {
           // Do not install an IC if the api function has a breakpoint.
           TRACE_HANDLER_STATS(isolate(), LoadIC_SlowStub);
           return slow_stub();
@@ -965,19 +971,13 @@ Handle<Object> LoadIC::ComputeHandler(LookupIterator* lookup) {
         if (receiver_is_holder) return smi_handler;
         TRACE_HANDLER_STATS(isolate(), LoadIC_LoadNormalFromPrototypeDH);
 
-      } else if (lookup->property_details().location() == kField) {
+      } else {
+        DCHECK_EQ(kField, lookup->property_details().location());
         FieldIndex field = lookup->GetFieldIndex();
         smi_handler = LoadHandler::LoadField(isolate(), field);
         TRACE_HANDLER_STATS(isolate(), LoadIC_LoadFieldDH);
         if (receiver_is_holder) return smi_handler;
         TRACE_HANDLER_STATS(isolate(), LoadIC_LoadFieldFromPrototypeDH);
-      } else {
-        DCHECK_EQ(kDescriptor, lookup->property_details().location());
-        smi_handler =
-            LoadHandler::LoadConstant(isolate(), lookup->GetConstantIndex());
-        TRACE_HANDLER_STATS(isolate(), LoadIC_LoadConstantDH);
-        if (receiver_is_holder) return smi_handler;
-        TRACE_HANDLER_STATS(isolate(), LoadIC_LoadConstantFromPrototypeDH);
       }
       return LoadHandler::LoadFromPrototype(isolate(), map, holder,
                                             smi_handler);
@@ -1187,6 +1187,7 @@ Handle<Object> KeyedLoadIC::LoadElementHandler(Handle<Map> receiver_map,
                                     is_js_array, load_mode);
   }
   DCHECK(IsFastElementsKind(elements_kind) ||
+         IsFrozenOrSealedElementsKind(elements_kind) ||
          IsFixedTypedArrayElementsKind(elements_kind));
   bool convert_hole_to_undefined =
       (elements_kind == HOLEY_SMI_ELEMENTS ||
@@ -1251,13 +1252,15 @@ bool ConvertKeyToIndex(Handle<Object> receiver, Handle<Object> key,
 }
 
 bool IsOutOfBoundsAccess(Handle<Object> receiver, uint32_t index) {
-  uint32_t length = 0;
+  size_t length;
   if (receiver->IsJSArray()) {
-    JSArray::cast(*receiver)->length()->ToArrayLength(&length);
-  } else if (receiver->IsString()) {
-    length = String::cast(*receiver)->length();
+    length = JSArray::cast(*receiver)->length()->Number();
+  } else if (receiver->IsJSTypedArray()) {
+    length = JSTypedArray::cast(*receiver)->length();
   } else if (receiver->IsJSObject()) {
     length = JSObject::cast(*receiver)->elements()->length();
+  } else if (receiver->IsString()) {
+    length = String::cast(*receiver)->length();
   } else {
     return false;
   }
@@ -1650,8 +1653,10 @@ MaybeObjectHandle StoreIC::ComputeHandler(LookupIterator* lookup) {
           return MaybeObjectHandle(slow_stub());
         }
 
-        if (setter->IsFunctionTemplateInfo() &&
-            FunctionTemplateInfo::cast(*setter)->BreakAtEntry()) {
+        if ((setter->IsFunctionTemplateInfo() &&
+             FunctionTemplateInfo::cast(*setter)->BreakAtEntry()) ||
+            (setter->IsJSFunction() &&
+             JSFunction::cast(*setter)->shared()->BreakAtEntry())) {
           // Do not install an IC if the api function has a breakpoint.
           TRACE_HANDLER_STATS(isolate(), StoreIC_SlowStub);
           return MaybeObjectHandle(slow_stub());
@@ -1761,13 +1766,16 @@ MaybeObjectHandle StoreIC::ComputeHandler(LookupIterator* lookup) {
 
 void KeyedStoreIC::UpdateStoreElement(Handle<Map> receiver_map,
                                       KeyedAccessStoreMode store_mode,
-                                      bool receiver_was_cow) {
+                                      Handle<Map> new_receiver_map) {
   MapHandles target_receiver_maps;
   TargetMaps(&target_receiver_maps);
   if (target_receiver_maps.empty()) {
-    Handle<Map> monomorphic_map =
-        ComputeTransitionedMap(receiver_map, store_mode);
-    store_mode = GetNonTransitioningStoreMode(store_mode, receiver_was_cow);
+    Handle<Map> monomorphic_map = receiver_map;
+    // If we transitioned to a map that is a more general map than incoming
+    // then use the new map.
+    if (IsTransitionOfMonomorphicTarget(*receiver_map, *new_receiver_map)) {
+      monomorphic_map = new_receiver_map;
+    }
     Handle<Object> handler = StoreElementHandler(monomorphic_map, store_mode);
     return ConfigureVectorState(Handle<Name>(), monomorphic_map, handler);
   }
@@ -1781,36 +1789,28 @@ void KeyedStoreIC::UpdateStoreElement(Handle<Map> receiver_map,
   }
 
   // There are several special cases where an IC that is MONOMORPHIC can still
-  // transition to a different GetNonTransitioningStoreMode IC that handles a
-  // superset of the original IC. Handle those here if the receiver map hasn't
-  // changed or it has transitioned to a more general kind.
-  KeyedAccessStoreMode old_store_mode;
-  old_store_mode = GetKeyedAccessStoreMode();
+  // transition to a different IC that handles a superset of the original IC.
+  // Handle those here if the receiver map hasn't changed or it has transitioned
+  // to a more general kind.
+  KeyedAccessStoreMode old_store_mode = GetKeyedAccessStoreMode();
   Handle<Map> previous_receiver_map = target_receiver_maps.at(0);
   if (state() == MONOMORPHIC) {
-    Handle<Map> transitioned_receiver_map = receiver_map;
-    if (IsTransitionStoreMode(store_mode)) {
-      transitioned_receiver_map =
-          ComputeTransitionedMap(receiver_map, store_mode);
-    }
-    if ((receiver_map.is_identical_to(previous_receiver_map) &&
-         IsTransitionStoreMode(store_mode)) ||
-        IsTransitionOfMonomorphicTarget(*previous_receiver_map,
+    Handle<Map> transitioned_receiver_map = new_receiver_map;
+    if (IsTransitionOfMonomorphicTarget(*previous_receiver_map,
                                         *transitioned_receiver_map)) {
       // If the "old" and "new" maps are in the same elements map family, or
       // if they at least come from the same origin for a transitioning store,
       // stay MONOMORPHIC and use the map for the most generic ElementsKind.
-      store_mode = GetNonTransitioningStoreMode(store_mode, receiver_was_cow);
       Handle<Object> handler =
           StoreElementHandler(transitioned_receiver_map, store_mode);
       ConfigureVectorState(Handle<Name>(), transitioned_receiver_map, handler);
       return;
     }
+    // If there is no transition and if we have seen the same map earlier and
+    // there is only a change in the store_mode we can still stay monomorphic.
     if (receiver_map.is_identical_to(previous_receiver_map) &&
-        old_store_mode == STANDARD_STORE &&
-        (store_mode == STORE_AND_GROW_NO_TRANSITION_HANDLE_COW ||
-         store_mode == STORE_NO_TRANSITION_IGNORE_OUT_OF_BOUNDS ||
-         store_mode == STORE_NO_TRANSITION_HANDLE_COW)) {
+        new_receiver_map.is_identical_to(receiver_map) &&
+        old_store_mode == STANDARD_STORE && store_mode != STANDARD_STORE) {
       // A "normal" IC that handles stores can switch to a version that can
       // grow at the end of the array, handle OOB accesses or copy COW arrays
       // and still stay MONOMORPHIC.
@@ -1824,11 +1824,9 @@ void KeyedStoreIC::UpdateStoreElement(Handle<Map> receiver_map,
   bool map_added =
       AddOneReceiverMapIfMissing(&target_receiver_maps, receiver_map);
 
-  if (IsTransitionStoreMode(store_mode)) {
-    Handle<Map> transitioned_receiver_map =
-        ComputeTransitionedMap(receiver_map, store_mode);
-    map_added |= AddOneReceiverMapIfMissing(&target_receiver_maps,
-                                            transitioned_receiver_map);
+  if (IsTransitionOfMonomorphicTarget(*receiver_map, *new_receiver_map)) {
+    map_added |=
+        AddOneReceiverMapIfMissing(&target_receiver_maps, new_receiver_map);
   }
 
   if (!map_added) {
@@ -1844,7 +1842,6 @@ void KeyedStoreIC::UpdateStoreElement(Handle<Map> receiver_map,
 
   // Make sure all polymorphic handlers have the same store mode, otherwise the
   // megamorphic stub must be used.
-  store_mode = GetNonTransitioningStoreMode(store_mode, receiver_was_cow);
   if (old_store_mode != STANDARD_STORE) {
     if (store_mode == STANDARD_STORE) {
       store_mode = old_store_mode;
@@ -1889,40 +1886,8 @@ void KeyedStoreIC::UpdateStoreElement(Handle<Map> receiver_map,
   }
 }
 
-Handle<Map> KeyedStoreIC::ComputeTransitionedMap(
-    Handle<Map> map, KeyedAccessStoreMode store_mode) {
-  switch (store_mode) {
-    case STORE_TRANSITION_TO_OBJECT:
-    case STORE_AND_GROW_TRANSITION_TO_OBJECT: {
-      ElementsKind kind = IsHoleyElementsKind(map->elements_kind())
-                              ? HOLEY_ELEMENTS
-                              : PACKED_ELEMENTS;
-      return Map::TransitionElementsTo(isolate(), map, kind);
-    }
-    case STORE_TRANSITION_TO_DOUBLE:
-    case STORE_AND_GROW_TRANSITION_TO_DOUBLE: {
-      ElementsKind kind = IsHoleyElementsKind(map->elements_kind())
-                              ? HOLEY_DOUBLE_ELEMENTS
-                              : PACKED_DOUBLE_ELEMENTS;
-      return Map::TransitionElementsTo(isolate(), map, kind);
-    }
-    case STORE_NO_TRANSITION_IGNORE_OUT_OF_BOUNDS:
-      DCHECK(map->has_fixed_typed_array_elements());
-      V8_FALLTHROUGH;
-    case STORE_NO_TRANSITION_HANDLE_COW:
-    case STANDARD_STORE:
-    case STORE_AND_GROW_NO_TRANSITION_HANDLE_COW:
-      return map;
-  }
-  UNREACHABLE();
-}
-
 Handle<Object> KeyedStoreIC::StoreElementHandler(
     Handle<Map> receiver_map, KeyedAccessStoreMode store_mode) {
-  DCHECK(store_mode == STANDARD_STORE ||
-         store_mode == STORE_AND_GROW_NO_TRANSITION_HANDLE_COW ||
-         store_mode == STORE_NO_TRANSITION_IGNORE_OUT_OF_BOUNDS ||
-         store_mode == STORE_NO_TRANSITION_HANDLE_COW);
   DCHECK_IMPLIES(
       receiver_map->DictionaryElementsInPrototypeChainOnly(isolate()),
       IsStoreInArrayLiteralICKind(kind()));
@@ -1939,6 +1904,7 @@ Handle<Object> KeyedStoreIC::StoreElementHandler(
     code =
         CodeFactory::KeyedStoreIC_SloppyArguments(isolate(), store_mode).code();
   } else if (receiver_map->has_fast_elements() ||
+             receiver_map->has_sealed_elements() ||
              receiver_map->has_fixed_typed_array_elements()) {
     TRACE_HANDLER_STATS(isolate(), KeyedStoreIC_StoreFastElementStub);
     code = CodeFactory::StoreFastElementIC(isolate(), store_mode).code();
@@ -1951,7 +1917,8 @@ Handle<Object> KeyedStoreIC::StoreElementHandler(
   } else {
     // TODO(jgruber): Update counter name.
     TRACE_HANDLER_STATS(isolate(), KeyedStoreIC_StoreElementStub);
-    DCHECK_EQ(DICTIONARY_ELEMENTS, receiver_map->elements_kind());
+    DCHECK(DICTIONARY_ELEMENTS == receiver_map->elements_kind() ||
+           receiver_map->has_frozen_elements());
     code = CodeFactory::KeyedStoreIC_Slow(isolate(), store_mode).code();
   }
 
@@ -1972,11 +1939,6 @@ Handle<Object> KeyedStoreIC::StoreElementHandler(
 void KeyedStoreIC::StoreElementPolymorphicHandlers(
     MapHandles* receiver_maps, MaybeObjectHandles* handlers,
     KeyedAccessStoreMode store_mode) {
-  DCHECK(store_mode == STANDARD_STORE ||
-         store_mode == STORE_AND_GROW_NO_TRANSITION_HANDLE_COW ||
-         store_mode == STORE_NO_TRANSITION_IGNORE_OUT_OF_BOUNDS ||
-         store_mode == STORE_NO_TRANSITION_HANDLE_COW);
-
   // Filter out deprecated maps to ensure their instances get migrated.
   receiver_maps->erase(
       std::remove_if(
@@ -2026,49 +1988,39 @@ void KeyedStoreIC::StoreElementPolymorphicHandlers(
   }
 }
 
-static KeyedAccessStoreMode GetStoreMode(Handle<JSObject> receiver,
-                                         uint32_t index, Handle<Object> value) {
+namespace {
+
+bool MayHaveTypedArrayInPrototypeChain(Handle<JSObject> object) {
+  for (PrototypeIterator iter(object->GetIsolate(), *object); !iter.IsAtEnd();
+       iter.Advance()) {
+    // Be conservative, don't walk into proxies.
+    if (iter.GetCurrent()->IsJSProxy()) return true;
+    if (iter.GetCurrent()->IsJSTypedArray()) return true;
+  }
+  return false;
+}
+
+KeyedAccessStoreMode GetStoreMode(Handle<JSObject> receiver, uint32_t index) {
   bool oob_access = IsOutOfBoundsAccess(receiver, index);
   // Don't consider this a growing store if the store would send the receiver to
-  // dictionary mode.
+  // dictionary mode. Also make sure we don't consider this a growing store if
+  // there's any JSTypedArray in the {receiver}'s prototype chain, since that
+  // prototype is going to swallow all stores that are out-of-bounds for said
+  // prototype, and we just let the runtime deal with the complexity of this.
   bool allow_growth = receiver->IsJSArray() && oob_access &&
-                      !receiver->WouldConvertToSlowElements(index);
+                      !receiver->WouldConvertToSlowElements(index) &&
+                      !MayHaveTypedArrayInPrototypeChain(receiver);
   if (allow_growth) {
-    // Handle growing array in stub if necessary.
-    if (receiver->HasSmiElements()) {
-      if (value->IsHeapNumber()) {
-        return STORE_AND_GROW_TRANSITION_TO_DOUBLE;
-      }
-      if (value->IsHeapObject()) {
-        return STORE_AND_GROW_TRANSITION_TO_OBJECT;
-      }
-    } else if (receiver->HasDoubleElements()) {
-      if (!value->IsSmi() && !value->IsHeapNumber()) {
-        return STORE_AND_GROW_TRANSITION_TO_OBJECT;
-      }
-    }
-    return STORE_AND_GROW_NO_TRANSITION_HANDLE_COW;
-  } else {
-    // Handle only in-bounds elements accesses.
-    if (receiver->HasSmiElements()) {
-      if (value->IsHeapNumber()) {
-        return STORE_TRANSITION_TO_DOUBLE;
-      } else if (value->IsHeapObject()) {
-        return STORE_TRANSITION_TO_OBJECT;
-      }
-    } else if (receiver->HasDoubleElements()) {
-      if (!value->IsSmi() && !value->IsHeapNumber()) {
-        return STORE_TRANSITION_TO_OBJECT;
-      }
-    }
-    if (!FLAG_trace_external_array_abuse &&
-        receiver->map()->has_fixed_typed_array_elements() && oob_access) {
-      return STORE_NO_TRANSITION_IGNORE_OUT_OF_BOUNDS;
-    }
-    return receiver->elements()->IsCowArray() ? STORE_NO_TRANSITION_HANDLE_COW
-                                              : STANDARD_STORE;
+    return STORE_AND_GROW_HANDLE_COW;
   }
+  if (!FLAG_trace_external_array_abuse &&
+      receiver->map()->has_fixed_typed_array_elements() && oob_access) {
+    return STORE_IGNORE_OUT_OF_BOUNDS;
+  }
+  return receiver->elements()->IsCowArray() ? STORE_HANDLE_COW : STANDARD_STORE;
 }
+
+}  // namespace
 
 MaybeHandle<Object> KeyedStoreIC::Store(Handle<Object> object,
                                         Handle<Object> key,
@@ -2144,15 +2096,12 @@ MaybeHandle<Object> KeyedStoreIC::Store(Handle<Object> object,
       if (key_is_valid_index) {
         uint32_t index = static_cast<uint32_t>(Smi::ToInt(*key));
         Handle<JSObject> receiver_object = Handle<JSObject>::cast(object);
-        store_mode = GetStoreMode(receiver_object, index, value);
+        store_mode = GetStoreMode(receiver_object, index);
       }
     }
   }
 
   DCHECK(store_handle.is_null());
-  bool receiver_was_cow =
-      object->IsJSArray() &&
-      Handle<JSArray>::cast(object)->elements()->IsCowArray();
   ASSIGN_RETURN_ON_EXCEPTION(
       isolate(), store_handle,
       Runtime::SetObjectProperty(isolate(), object, key, value,
@@ -2172,7 +2121,9 @@ MaybeHandle<Object> KeyedStoreIC::Store(Handle<Object> object,
           // prototype chain does have dictionary elements. This ensures that
           // other non-dictionary receivers in the polymorphic case benefit
           // from fast path keyed stores.
-          UpdateStoreElement(old_receiver_map, store_mode, receiver_was_cow);
+          Handle<HeapObject> receiver = Handle<HeapObject>::cast(object);
+          UpdateStoreElement(old_receiver_map, store_mode,
+                             handle(receiver->map(), isolate()));
         } else {
           set_slow_stub_reason("dictionary or proxy prototype");
         }
@@ -2224,16 +2175,16 @@ void StoreInArrayLiteralIC::Store(Handle<JSArray> array, Handle<Object> index,
   if (index->IsSmi()) {
     DCHECK_GE(Smi::ToInt(*index), 0);
     uint32_t index32 = static_cast<uint32_t>(Smi::ToInt(*index));
-    store_mode = GetStoreMode(array, index32, value);
+    store_mode = GetStoreMode(array, index32);
   }
 
   Handle<Map> old_array_map(array->map(), isolate());
-  bool array_was_cow = array->elements()->IsCowArray();
   StoreOwnElement(isolate(), array, index, value);
 
   if (index->IsSmi()) {
     DCHECK(!old_array_map->is_abandoned_prototype_map());
-    UpdateStoreElement(old_array_map, store_mode, array_was_cow);
+    UpdateStoreElement(old_array_map, store_mode,
+                       handle(array->map(), isolate()));
   } else {
     set_slow_stub_reason("index out of Smi range");
   }
@@ -2755,7 +2706,7 @@ RUNTIME_FUNCTION(Runtime_StoreCallbackProperty) {
   Handle<Object> value = args.at(4);
   HandleScope scope(isolate);
 
-  if (V8_UNLIKELY(FLAG_runtime_stats)) {
+  if (V8_UNLIKELY(TracingFlags::is_runtime_stats_enabled())) {
     RETURN_RESULT_OR_FAILURE(
         isolate, Runtime::SetObjectProperty(isolate, receiver, name, value,
                                             StoreOrigin::kMaybeKeyed));

@@ -6,13 +6,13 @@
 
 #include <vector>
 
-#include "src/char-predicates-inl.h"
+#include "src/execution/isolate.h"
 #include "src/heap/factory.h"
-#include "src/isolate.h"
 #include "src/objects-inl.h"
 #include "src/ostreams.h"
 #include "src/regexp/jsregexp.h"
 #include "src/regexp/property-sequences.h"
+#include "src/strings/char-predicates-inl.h"
 #include "src/utils.h"
 #include "src/zone/zone-list-inl.h"
 
@@ -77,7 +77,7 @@ void RegExpParser::Advance() {
   if (has_next()) {
     StackLimitCheck check(isolate());
     if (check.HasOverflowed()) {
-      if (FLAG_abort_on_stack_or_string_length_overflow) {
+      if (FLAG_correctness_fuzzer_suppressions) {
         FATAL("Aborting on stack overflow");
       }
       ReportError(CStrVector(

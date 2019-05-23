@@ -6,7 +6,7 @@
 #define V8_X64_FRAME_CONSTANTS_X64_H_
 
 #include "src/base/macros.h"
-#include "src/frame-constants.h"
+#include "src/execution/frame-constants.h"
 
 namespace v8 {
 namespace internal {
@@ -44,8 +44,7 @@ class EntryFrameConstants : public AllStatic {
 class ExitFrameConstants : public TypedFrameConstants {
  public:
   static constexpr int kSPOffset = TYPED_FRAME_PUSHED_VALUE_OFFSET(0);
-  static constexpr int kCodeOffset = TYPED_FRAME_PUSHED_VALUE_OFFSET(1);
-  DEFINE_TYPED_FRAME_SIZES(2);
+  DEFINE_TYPED_FRAME_SIZES(1);
 
   static constexpr int kCallerFPOffset = +0 * kSystemPointerSize;
   static constexpr int kCallerPCOffset = kFPOnStackSize;

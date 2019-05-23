@@ -4,29 +4,30 @@
 
 #include "src/external-reference.h"
 
-#include "src/api.h"
+#include "src/api/api.h"
 #include "src/base/ieee754.h"
+#include "src/codegen/cpu-features.h"
 #include "src/compiler/code-assembler.h"
-#include "src/counters.h"
-#include "src/cpu-features.h"
-#include "src/date.h"
+#include "src/date/date.h"
 #include "src/debug/debug.h"
-#include "src/deoptimizer.h"
-#include "src/elements.h"
+#include "src/deoptimizer/deoptimizer.h"
 #include "src/hash-seed-inl.h"
 #include "src/heap/heap.h"
+#include "src/logging/counters.h"
+#include "src/objects/elements.h"
+#include "src/objects/ordered-hash-table.h"
 // For IncrementalMarking::RecordWriteFromCode. TODO(jkummerow): Drop.
+#include "src/execution/isolate.h"
+#include "src/execution/microtask-queue.h"
+#include "src/execution/simulator-base.h"
 #include "src/heap/heap-inl.h"
 #include "src/ic/stub-cache.h"
 #include "src/interpreter/interpreter.h"
-#include "src/isolate.h"
-#include "src/log.h"
-#include "src/math-random.h"
-#include "src/microtask-queue.h"
+#include "src/logging/log.h"
+#include "src/numbers/math-random.h"
 #include "src/objects-inl.h"
 #include "src/regexp/regexp-stack.h"
-#include "src/simulator-base.h"
-#include "src/string-search.h"
+#include "src/strings/string-search.h"
 #include "src/wasm/wasm-external-refs.h"
 
 // Include native regexp-macro-assembler.
@@ -243,6 +244,9 @@ ExternalReference ExternalReference::store_buffer_overflow_function() {
 FUNCTION_REFERENCE(delete_handle_scope_extensions,
                    HandleScope::DeleteExtensions)
 
+FUNCTION_REFERENCE(ephemeron_key_write_barrier_function,
+                   Heap::EphemeronKeyWriteBarrierFromCode)
+
 FUNCTION_REFERENCE(get_date_field_function, JSDate::GetField)
 
 ExternalReference ExternalReference::date_cache_stamp(Isolate* isolate) {
@@ -334,9 +338,6 @@ FUNCTION_REFERENCE(f64_mod_wrapper_function, f64_mod_wrapper)
 FUNCTION_REFERENCE(wasm_call_trap_callback_for_testing,
                    wasm::call_trap_callback_for_testing)
 
-FUNCTION_REFERENCE(log_enter_external_function, Logger::EnterExternal)
-FUNCTION_REFERENCE(log_leave_external_function, Logger::LeaveExternal)
-
 ExternalReference ExternalReference::isolate_root(Isolate* isolate) {
   return ExternalReference(isolate->isolate_root());
 }
@@ -426,7 +427,7 @@ ExternalReference::address_of_mock_arraybuffer_allocator_flag() {
 }
 
 ExternalReference ExternalReference::address_of_runtime_stats_flag() {
-  return ExternalReference(&FLAG_runtime_stats);
+  return ExternalReference(&TracingFlags::runtime_stats);
 }
 
 ExternalReference ExternalReference::address_of_one_half() {

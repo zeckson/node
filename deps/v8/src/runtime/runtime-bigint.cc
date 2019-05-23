@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/arguments-inl.h"
-#include "src/counters.h"
+#include "src/execution/arguments-inl.h"
+#include "src/logging/counters.h"
 #include "src/objects-inl.h"
 #include "src/objects/bigint.h"
 #include "src/runtime/runtime-utils.h"

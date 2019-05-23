@@ -8,9 +8,9 @@
 #include <forward_list>
 
 #include "src/base/macros.h"
+#include "src/execution/message-template.h"
 #include "src/globals.h"
 #include "src/handles.h"
-#include "src/message-template.h"
 
 namespace v8 {
 namespace internal {
@@ -57,7 +57,8 @@ class PendingCompilationErrorHandler {
   // Handle warnings detected during compilation.
   void ReportWarnings(Isolate* isolate, Handle<Script> script);
 
-  Handle<String> FormatErrorMessageForTest(Isolate* isolate) const;
+  V8_EXPORT_PRIVATE Handle<String> FormatErrorMessageForTest(
+      Isolate* isolate) const;
 
   void set_unidentifiable_error() {
     has_pending_error_ = true;

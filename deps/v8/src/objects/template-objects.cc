@@ -5,11 +5,11 @@
 #include "src/objects/template-objects.h"
 
 #include "src/base/functional.h"
+#include "src/execution/isolate.h"
 #include "src/heap/factory.h"
-#include "src/isolate.h"
 #include "src/objects-inl.h"
+#include "src/objects/property-descriptor.h"
 #include "src/objects/template-objects-inl.h"
-#include "src/property-descriptor.h"
 
 namespace v8 {
 namespace internal {
@@ -42,12 +42,14 @@ Handle<JSArray> TemplateObjectDescription::GetTemplateObject(
   // Create the raw object from the {raw_strings}.
   Handle<FixedArray> raw_strings(description->raw_strings(), isolate);
   Handle<JSArray> raw_object = isolate->factory()->NewJSArrayWithElements(
-      raw_strings, PACKED_ELEMENTS, raw_strings->length(), TENURED);
+      raw_strings, PACKED_ELEMENTS, raw_strings->length(),
+      AllocationType::kOld);
 
   // Create the template object from the {cooked_strings}.
   Handle<FixedArray> cooked_strings(description->cooked_strings(), isolate);
   Handle<JSArray> template_object = isolate->factory()->NewJSArrayWithElements(
-      cooked_strings, PACKED_ELEMENTS, cooked_strings->length(), TENURED);
+      cooked_strings, PACKED_ELEMENTS, cooked_strings->length(),
+      AllocationType::kOld);
 
   // Freeze the {raw_object}.
   JSObject::SetIntegrityLevel(raw_object, FROZEN, kThrowOnError).ToChecked();
@@ -85,7 +87,7 @@ Handle<CachedTemplateObject> CachedTemplateObject::New(
   DCHECK(next->IsCachedTemplateObject() || next->IsTheHole());
   Factory* factory = isolate->factory();
   Handle<CachedTemplateObject> result = Handle<CachedTemplateObject>::cast(
-      factory->NewStruct(TUPLE3_TYPE, TENURED));
+      factory->NewStruct(TUPLE3_TYPE, AllocationType::kOld));
   result->set_slot_id(slot_id);
   result->set_template_object(*template_object);
   result->set_next(*next);

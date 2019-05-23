@@ -7,16 +7,16 @@
 
 #include "src/objects/descriptor-array.h"
 
-#include "src/field-type.h"
+#include "src/execution/isolate.h"
 #include "src/heap/heap-write-barrier.h"
 #include "src/heap/heap.h"
-#include "src/isolate.h"
-#include "src/lookup-cache-inl.h"
 #include "src/maybe-handles-inl.h"
+#include "src/objects/field-type.h"
 #include "src/objects/heap-object-inl.h"
-#include "src/objects/maybe-object.h"
+#include "src/objects/lookup-cache-inl.h"
+#include "src/objects/maybe-object-inl.h"
+#include "src/objects/property.h"
 #include "src/objects/struct-inl.h"
-#include "src/property.h"
 
 // Has to be the last include (doesn't have include guards):
 #include "src/objects/object-macros.h"
@@ -25,7 +25,7 @@ namespace v8 {
 namespace internal {
 
 OBJECT_CONSTRUCTORS_IMPL(DescriptorArray, HeapObject)
-OBJECT_CONSTRUCTORS_IMPL(EnumCache, Tuple2)
+OBJECT_CONSTRUCTORS_IMPL(EnumCache, Struct)
 
 CAST_ACCESSOR(DescriptorArray)
 CAST_ACCESSOR(EnumCache)
@@ -92,7 +92,11 @@ int DescriptorArray::SearchWithCache(Isolate* isolate, Name name, Map map) {
 }
 
 ObjectSlot DescriptorArray::GetFirstPointerSlot() {
-  return RawField(DescriptorArray::kPointersStartOffset);
+  static_assert(kEndOfStrongFieldsOffset == kStartOfWeakFieldsOffset,
+                "Weak and strong fields are continuous.");
+  static_assert(kEndOfWeakFieldsOffset == kHeaderSize,
+                "Weak fields extend up to the end of the header.");
+  return RawField(DescriptorArray::kStartOfStrongFieldsOffset);
 }
 
 ObjectSlot DescriptorArray::GetDescriptorSlot(int descriptor) {

@@ -4,8 +4,8 @@
 
 #include "test/cctest/assembler-helper-arm.h"
 
-#include "src/macro-assembler.h"
-#include "src/isolate-inl.h"
+#include "src/codegen/macro-assembler.h"
+#include "src/execution/isolate-inl.h"
 #include "src/v8.h"
 #include "test/cctest/cctest.h"
 
@@ -21,8 +21,7 @@ Handle<Code> AssembleCodeImpl(std::function<void(MacroAssembler&)> assemble) {
 
   CodeDesc desc;
   assm.GetCode(isolate, &desc);
-  Handle<Code> code =
-      isolate->factory()->NewCode(desc, Code::STUB, Handle<Code>());
+  Handle<Code> code = Factory::CodeBuilder(isolate, desc, Code::STUB).Build();
   if (FLAG_print_code) {
     code->Print();
   }

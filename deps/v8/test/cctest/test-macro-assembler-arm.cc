@@ -27,11 +27,11 @@
 
 #include <stdlib.h>
 
-#include "src/assembler-inl.h"
-#include "src/macro-assembler.h"
+#include "src/codegen/assembler-inl.h"
+#include "src/codegen/macro-assembler.h"
+#include "src/execution/simulator.h"
 #include "src/objects-inl.h"
 #include "src/ostreams.h"
-#include "src/simulator.h"
 #include "src/v8.h"
 #include "test/cctest/cctest.h"
 #include "test/common/assembler-tester.h"
@@ -146,8 +146,7 @@ TEST(ExtractLane) {
 
   CodeDesc desc;
   masm->GetCode(isolate, &desc);
-  Handle<Code> code =
-      isolate->factory()->NewCode(desc, Code::STUB, Handle<Code>());
+  Handle<Code> code = Factory::CodeBuilder(isolate, desc, Code::STUB).Build();
 #ifdef DEBUG
   StdoutStream os;
   code->Print(os);
@@ -277,8 +276,7 @@ TEST(ReplaceLane) {
 
   CodeDesc desc;
   masm->GetCode(isolate, &desc);
-  Handle<Code> code =
-      isolate->factory()->NewCode(desc, Code::STUB, Handle<Code>());
+  Handle<Code> code = Factory::CodeBuilder(isolate, desc, Code::STUB).Build();
 #ifdef DEBUG
   StdoutStream os;
   code->Print(os);

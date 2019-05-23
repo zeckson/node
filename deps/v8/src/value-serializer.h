@@ -11,9 +11,9 @@
 #include "include/v8.h"
 #include "src/base/compiler-specific.h"
 #include "src/base/macros.h"
+#include "src/execution/message-template.h"
 #include "src/identity-map.h"
 #include "src/maybe-handles.h"
-#include "src/message-template.h"
 #include "src/vector.h"
 #include "src/zone/zone.h"
 
@@ -296,7 +296,7 @@ class ValueDeserializer {
   v8::ValueDeserializer::Delegate* const delegate_;
   const uint8_t* position_;
   const uint8_t* const end_;
-  PretenureFlag pretenure_;
+  AllocationType allocation_;
   uint32_t version_ = 0;
   uint32_t next_id_ = 0;
   bool expect_inline_wasm_ = false;

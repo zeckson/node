@@ -7,15 +7,34 @@
 
 #ifdef V8_INTL_SUPPORT
 #define INTERNALIZED_STRING_LIST_GENERATOR_INTL(V, _)               \
+  V(_, adoptText_string, "adoptText")                               \
+  V(_, baseName_string, "baseName")                                 \
+  V(_, accounting_string, "accounting")                             \
   V(_, breakType_string, "breakType")                               \
   V(_, calendar_string, "calendar")                                 \
   V(_, cardinal_string, "cardinal")                                 \
   V(_, caseFirst_string, "caseFirst")                               \
+  V(_, compare_string, "compare")                                   \
+  V(_, current_string, "current")                                   \
+  V(_, collation_string, "collation")                               \
+  V(_, compact_string, "compact")                                   \
+  V(_, compactDisplay_string, "compactDisplay")                     \
+  V(_, currency_string, "currency")                                 \
+  V(_, currencyDisplay_string, "currencyDisplay")                   \
+  V(_, currencySign_string, "currencySign")                         \
   V(_, dateStyle_string, "dateStyle")                               \
   V(_, day_string, "day")                                           \
   V(_, dayPeriod_string, "dayPeriod")                               \
   V(_, decimal_string, "decimal")                                   \
+  V(_, endRange_string, "endRange")                                 \
+  V(_, engineering_string, "engineering")                           \
   V(_, era_string, "era")                                           \
+  V(_, first_string, "first")                                       \
+  V(_, format_string, "format")                                     \
+  V(_, except_zero_string, "except-zero")                           \
+  V(_, exponentInteger_string, "exponentInteger")                   \
+  V(_, exponentMinusSign_string, "exponentMinusSign")               \
+  V(_, exponentSeparator_string, "exponentSeparator")               \
   V(_, fraction_string, "fraction")                                 \
   V(_, full_string, "full")                                         \
   V(_, granularity_string, "granularity")                           \
@@ -28,14 +47,12 @@
   V(_, hour_string, "hour")                                         \
   V(_, hour12_string, "hour12")                                     \
   V(_, hourCycle_string, "hourCycle")                               \
-  V(_, collation_string, "collation")                               \
-  V(_, currency_string, "currency")                                 \
-  V(_, currencyDisplay_string, "currencyDisplay")                   \
   V(_, ideo_string, "ideo")                                         \
   V(_, ignorePunctuation_string, "ignorePunctuation")               \
   V(_, Invalid_Date_string, "Invalid Date")                         \
   V(_, integer_string, "integer")                                   \
   V(_, kana_string, "kana")                                         \
+  V(_, language_string, "language")                                 \
   V(_, letter_string, "letter")                                     \
   V(_, list_string, "list")                                         \
   V(_, literal_string, "literal")                                   \
@@ -44,14 +61,17 @@
   V(_, lower_string, "lower")                                       \
   V(_, maximumFractionDigits_string, "maximumFractionDigits")       \
   V(_, maximumSignificantDigits_string, "maximumSignificantDigits") \
-  V(_, nan_string, "nan")                                           \
   V(_, minimumFractionDigits_string, "minimumFractionDigits")       \
   V(_, minimumIntegerDigits_string, "minimumIntegerDigits")         \
   V(_, minimumSignificantDigits_string, "minimumSignificantDigits") \
   V(_, minusSign_string, "minusSign")                               \
   V(_, minute_string, "minute")                                     \
   V(_, month_string, "month")                                       \
+  V(_, nan_string, "nan")                                           \
+  V(_, narrow_symbol_string, "narrow-symbol")                       \
+  V(_, never_string, "never")                                       \
   V(_, none_string, "none")                                         \
+  V(_, notation_string, "notation")                                 \
   V(_, normal_string, "normal")                                     \
   V(_, numberingSystem_string, "numberingSystem")                   \
   V(_, numeric_string, "numeric")                                   \
@@ -59,11 +79,17 @@
   V(_, percentSign_string, "percentSign")                           \
   V(_, plusSign_string, "plusSign")                                 \
   V(_, quarter_string, "quarter")                                   \
+  V(_, region_string, "region")                                     \
+  V(_, scientific_string, "scientific")                             \
   V(_, second_string, "second")                                     \
   V(_, segment_string, "segment")                                   \
   V(_, SegmentIterator_string, "Segment Iterator")                  \
   V(_, sensitivity_string, "sensitivity")                           \
   V(_, sep_string, "sep")                                           \
+  V(_, shared_string, "shared")                                     \
+  V(_, signDisplay_string, "signDisplay")                           \
+  V(_, standard_string, "standard")                                 \
+  V(_, startRange_string, "startRange")                             \
   V(_, strict_string, "strict")                                     \
   V(_, style_string, "style")                                       \
   V(_, term_string, "term")                                         \
@@ -77,6 +103,7 @@
   V(_, useGrouping_string, "useGrouping")                           \
   V(_, UTC_string, "UTC")                                           \
   V(_, unit_string, "unit")                                         \
+  V(_, unitDisplay_string, "unitDisplay")                           \
   V(_, weekday_string, "weekday")                                   \
   V(_, year_string, "year")
 #else  // V8_INTL_SUPPORT
@@ -136,6 +163,7 @@
   V(_, disjunction_string, "disjunction")                             \
   V(_, display_name_string, "displayName")                            \
   V(_, done_string, "done")                                           \
+  V(_, dot_brand_string, ".brand")                                    \
   V(_, dot_catch_string, ".catch")                                    \
   V(_, dot_default_string, ".default")                                \
   V(_, dot_for_string, ".for")                                        \

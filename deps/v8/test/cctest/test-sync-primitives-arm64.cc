@@ -29,8 +29,8 @@
 #include "test/cctest/cctest.h"
 
 #include "src/arm64/simulator-arm64.h"
+#include "src/codegen/macro-assembler-inl.h"
 #include "src/heap/factory.h"
-#include "src/macro-assembler-inl.h"
 #include "src/objects-inl.h"
 
 namespace v8 {
@@ -204,8 +204,7 @@ void TestInvalidateExclusiveAccess(TestData initial_data, MemoryAccess access1,
 
   CodeDesc desc;
   masm.GetCode(isolate, &desc);
-  Handle<Code> code =
-      isolate->factory()->NewCode(desc, Code::STUB, Handle<Code>());
+  Handle<Code> code = Factory::CodeBuilder(isolate, desc, Code::STUB).Build();
 
   TestData t = initial_data;
   Simulator::current(isolate)->Call<void>(code->entry(), &t);
@@ -276,8 +275,7 @@ int ExecuteMemoryAccess(Isolate* isolate, TestData* test_data,
 
   CodeDesc desc;
   masm.GetCode(isolate, &desc);
-  Handle<Code> code =
-      isolate->factory()->NewCode(desc, Code::STUB, Handle<Code>());
+  Handle<Code> code = Factory::CodeBuilder(isolate, desc, Code::STUB).Build();
   Simulator::current(isolate)->Call<void>(code->entry(), test_data);
   return Simulator::current(isolate)->wreg(0);
 }

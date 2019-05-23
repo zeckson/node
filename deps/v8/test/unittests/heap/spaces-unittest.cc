@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/execution/isolate.h"
 #include "src/heap/heap-inl.h"
 #include "src/heap/heap-write-barrier-inl.h"
 #include "src/heap/spaces-inl.h"
-#include "src/isolate.h"
 #include "test/unittests/test-utils.h"
 
 namespace v8 {
 namespace internal {
 
-typedef TestWithIsolate SpacesTest;
+using SpacesTest = TestWithIsolate;
 
 TEST_F(SpacesTest, CompactionSpaceMerge) {
   Heap* heap = i_isolate()->heap();

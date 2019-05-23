@@ -4,9 +4,9 @@
 
 #include "src/snapshot/object-deserializer.h"
 
-#include "src/assembler-inl.h"
+#include "src/codegen/assembler-inl.h"
+#include "src/execution/isolate.h"
 #include "src/heap/heap-inl.h"
-#include "src/isolate.h"
 #include "src/objects.h"
 #include "src/objects/allocation-site-inl.h"
 #include "src/objects/slots.h"
@@ -73,8 +73,6 @@ void ObjectDeserializer::CommitPostProcessedObjects() {
   for (Handle<String> string : new_internalized_strings()) {
     DisallowHeapAllocation no_gc;
     StringTableInsertionKey key(*string);
-    DCHECK(
-        StringTable::ForwardStringIfExists(isolate(), &key, *string).is_null());
     StringTable::AddKeyNoResize(isolate(), &key);
   }
 

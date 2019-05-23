@@ -47,7 +47,7 @@ class Builtins {
   enum Name : int32_t {
 #define DEF_ENUM(Name, ...) k##Name,
     BUILTIN_LIST(DEF_ENUM, DEF_ENUM, DEF_ENUM, DEF_ENUM, DEF_ENUM, DEF_ENUM,
-                 DEF_ENUM, DEF_ENUM)
+                 DEF_ENUM)
 #undef DEF_ENUM
         builtin_count,
 
@@ -65,7 +65,7 @@ class Builtins {
   }
 
   // The different builtin kinds are documented in builtins-definitions.h.
-  enum Kind { CPP, API, TFJ, TFC, TFS, TFH, BCH, ASM };
+  enum Kind { CPP, TFJ, TFC, TFS, TFH, BCH, ASM };
 
   static BailoutId GetContinuationBailoutId(Name name);
   static Name GetBuiltinFromBailoutId(BailoutId);
@@ -81,7 +81,7 @@ class Builtins {
   // Used by CreateOffHeapTrampolines in isolate.cc.
   void set_builtin(int index, Code builtin);
 
-  Code builtin(int index);
+  V8_EXPORT_PRIVATE Code builtin(int index);
   V8_EXPORT_PRIVATE Handle<Code> builtin_handle(int index);
 
   V8_EXPORT_PRIVATE static Callable CallableFor(Isolate* isolate, Name name);
@@ -102,7 +102,6 @@ class Builtins {
   static const char* KindNameOf(int index);
 
   static bool IsCpp(int index);
-  static bool HasCppImplementation(int index);
 
   // True, iff the given code object is a builtin. Note that this does not
   // necessarily mean that its kind is Code::BUILTIN.
@@ -156,10 +155,7 @@ class Builtins {
       Handle<Object> receiver, int argc, Handle<Object> args[],
       Handle<HeapObject> new_target);
 
-  enum ExitFrameType { EXIT, BUILTIN_EXIT };
-
-  static void Generate_Adaptor(MacroAssembler* masm, Address builtin_address,
-                               ExitFrameType exit_frame_type);
+  static void Generate_Adaptor(MacroAssembler* masm, Address builtin_address);
 
   static void Generate_CEntry(MacroAssembler* masm, int result_size,
                               SaveFPRegsMode save_doubles, ArgvMode argv_mode,
@@ -172,7 +168,8 @@ class Builtins {
   // The result should not be used directly, but only from the related Factory
   // function.
   static Handle<Code> GenerateOffHeapTrampolineFor(Isolate* isolate,
-                                                   Address off_heap_entry);
+                                                   Address off_heap_entry,
+                                                   int32_t kind_specific_flags);
 
   // Generate the RelocInfo ByteArray that would be generated for an offheap
   // trampoline.
@@ -230,8 +227,8 @@ class Builtins {
 #define DECLARE_TF(Name, ...) \
   static void Generate_##Name(compiler::CodeAssemblerState* state);
 
-  BUILTIN_LIST(IGNORE_BUILTIN, IGNORE_BUILTIN, DECLARE_TF, DECLARE_TF,
-               DECLARE_TF, DECLARE_TF, IGNORE_BUILTIN, DECLARE_ASM)
+  BUILTIN_LIST(IGNORE_BUILTIN, DECLARE_TF, DECLARE_TF, DECLARE_TF, DECLARE_TF,
+               IGNORE_BUILTIN, DECLARE_ASM)
 
 #undef DECLARE_ASM
 #undef DECLARE_TF

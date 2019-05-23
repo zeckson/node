@@ -4,23 +4,23 @@
 
 #include "src/debug/liveedit.h"
 
-#include "src/api-inl.h"
+#include "src/api/api-inl.h"
 #include "src/ast/ast-traversal-visitor.h"
 #include "src/ast/ast.h"
 #include "src/ast/scopes.h"
-#include "src/compilation-cache.h"
-#include "src/compiler.h"
+#include "src/codegen/compilation-cache.h"
+#include "src/codegen/compiler.h"
+#include "src/codegen/source-position-table.h"
 #include "src/debug/debug-interface.h"
 #include "src/debug/debug.h"
-#include "src/frames-inl.h"
-#include "src/isolate-inl.h"
-#include "src/log.h"
+#include "src/execution/frames-inl.h"
+#include "src/execution/isolate-inl.h"
+#include "src/logging/log.h"
 #include "src/objects-inl.h"
 #include "src/objects/hash-table-inl.h"
 #include "src/objects/js-generator-inl.h"
 #include "src/parsing/parse-info.h"
 #include "src/parsing/parsing.h"
-#include "src/source-position-table.h"
 #include "src/v8.h"
 #include "src/v8threads.h"
 
@@ -1114,6 +1114,7 @@ void LiveEdit::PatchScript(Isolate* isolate, Handle<Script> script,
       Handle<DebugInfo> debug_info(sfi->GetDebugInfo(), isolate);
       isolate->debug()->RemoveBreakInfoAndMaybeFree(debug_info);
     }
+    SharedFunctionInfo::EnsureSourcePositionsAvailable(isolate, sfi);
     UpdatePositions(isolate, sfi, diffs);
 
     sfi->set_script(*new_script);

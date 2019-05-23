@@ -9,9 +9,9 @@
 #include "src/ast/ast.h"
 #include "src/ast/scopes.h"
 #include "src/debug/debug.h"
-#include "src/frames-inl.h"
+#include "src/execution/frames-inl.h"
+#include "src/execution/isolate-inl.h"
 #include "src/globals.h"
-#include "src/isolate-inl.h"
 #include "src/objects/js-generator-inl.h"
 #include "src/objects/module.h"
 #include "src/ostreams.h"
@@ -329,6 +329,7 @@ ScopeIterator::ScopeType ScopeIterator::Type() const {
         DCHECK(context_->IsCatchContext());
         return ScopeTypeCatch;
       case BLOCK_SCOPE:
+      case CLASS_SCOPE:
         DCHECK_IMPLIES(current_scope_->NeedsContext(),
                        context_->IsBlockContext());
         return ScopeTypeBlock;

@@ -4,11 +4,11 @@
 
 #include "src/snapshot/code-serializer.h"
 
-#include "src/counters.h"
+#include "src/codegen/macro-assembler.h"
 #include "src/debug/debug.h"
 #include "src/heap/heap-inl.h"
-#include "src/log.h"
-#include "src/macro-assembler.h"
+#include "src/logging/counters.h"
+#include "src/logging/log.h"
 #include "src/objects-inl.h"
 #include "src/objects/slots.h"
 #include "src/snapshot/object-deserializer.h"
@@ -56,8 +56,6 @@ ScriptCompiler::CachedData* CodeSerializer::Serialize(
   // TODO(7110): Enable serialization of Asm modules once the AsmWasmData is
   // context independent.
   if (script->ContainsAsmModule()) return nullptr;
-
-  isolate->heap()->read_only_space()->ClearStringPaddingIfNeeded();
 
   // Serialize code object.
   Handle<String> source(String::cast(script->source()), isolate);
@@ -245,7 +243,7 @@ void CreateInterpreterDataForDeserializedCode(Isolate* isolate,
 
     Handle<InterpreterData> interpreter_data =
         Handle<InterpreterData>::cast(isolate->factory()->NewStruct(
-            INTERPRETER_DATA_TYPE, TENURED));
+            INTERPRETER_DATA_TYPE, AllocationType::kOld));
 
     interpreter_data->set_bytecode_array(info->GetBytecodeArray());
     interpreter_data->set_interpreter_trampoline(*code);

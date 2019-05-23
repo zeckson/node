@@ -19,10 +19,9 @@
 
 // TODO(mstarzinger): There is one more include to remove in order to no longer
 // leak heap internals to users of this interface!
+#include "src/execution/isolate-data.h"
+#include "src/execution/isolate.h"
 #include "src/heap/spaces-inl.h"
-#include "src/isolate-data.h"
-#include "src/isolate.h"
-#include "src/msan.h"
 #include "src/objects-inl.h"
 #include "src/objects/allocation-site-inl.h"
 #include "src/objects/api-callbacks-inl.h"
@@ -37,7 +36,8 @@
 #include "src/objects/slots-inl.h"
 #include "src/objects/struct-inl.h"
 #include "src/profiler/heap-profiler.h"
-#include "src/string-hasher.h"
+#include "src/sanitizer/msan.h"
+#include "src/strings/string-hasher.h"
 #include "src/zone/zone-list-inl.h"
 
 namespace v8 {
@@ -119,9 +119,9 @@ void Heap::SetMessageListeners(TemplateList value) {
   roots_table()[RootIndex::kMessageListeners] = value->ptr();
 }
 
-void Heap::SetPendingOptimizeForTestBytecode(Object bytecode) {
-  DCHECK(bytecode->IsBytecodeArray() || bytecode->IsUndefined(isolate()));
-  roots_table()[RootIndex::kPendingOptimizeForTestBytecode] = bytecode->ptr();
+void Heap::SetPendingOptimizeForTestBytecode(Object hash_table) {
+  DCHECK(hash_table->IsObjectHashTable() || hash_table->IsUndefined(isolate()));
+  roots_table()[RootIndex::kPendingOptimizeForTestBytecode] = hash_table->ptr();
 }
 
 PagedSpace* Heap::paged_space(int idx) {
@@ -224,6 +224,11 @@ AllocationResult Heap::AllocateRaw(int size_in_bytes, AllocationType type,
       // already.
       UnprotectAndRegisterMemoryChunk(object);
       ZapCodeObject(object->address(), size_in_bytes);
+      if (!large_object) {
+        MemoryChunk::FromHeapObject(object)
+            ->GetCodeObjectRegistry()
+            ->RegisterNewlyAllocatedCodeObject(object->address());
+      }
     }
     OnAllocationEvent(object, size_in_bytes);
   }
@@ -367,10 +372,6 @@ bool Heap::InToPage(HeapObject heap_object) {
 }
 
 bool Heap::InOldSpace(Object object) { return old_space_->Contains(object); }
-
-bool Heap::InReadOnlySpace(Object object) {
-  return read_only_space_->Contains(object);
-}
 
 // static
 Heap* Heap::FromWritableHeapObject(const HeapObject obj) {

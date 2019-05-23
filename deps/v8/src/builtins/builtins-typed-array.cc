@@ -4,9 +4,9 @@
 
 #include "src/builtins/builtins-utils-inl.h"
 #include "src/builtins/builtins.h"
-#include "src/counters.h"
-#include "src/elements.h"
+#include "src/logging/counters.h"
 #include "src/objects-inl.h"
+#include "src/objects/elements.h"
 #include "src/objects/heap-number-inl.h"
 #include "src/objects/js-array-buffer-inl.h"
 
@@ -51,7 +51,7 @@ BUILTIN(TypedArrayPrototypeCopyWithin) {
   ASSIGN_RETURN_FAILURE_ON_EXCEPTION(
       isolate, array, JSTypedArray::Validate(isolate, args.receiver(), method));
 
-  int64_t len = array->length_value();
+  int64_t len = array->length();
   int64_t to = 0;
   int64_t from = 0;
   int64_t final = len;
@@ -124,7 +124,7 @@ BUILTIN(TypedArrayPrototypeFill) {
                                        Object::ToNumber(isolate, obj_value));
   }
 
-  int64_t len = array->length_value();
+  int64_t len = array->length();
   int64_t start = 0;
   int64_t end = len;
 
@@ -171,7 +171,7 @@ BUILTIN(TypedArrayPrototypeIncludes) {
 
   if (args.length() < 2) return ReadOnlyRoots(isolate).false_value();
 
-  int64_t len = array->length_value();
+  int64_t len = array->length();
   if (len == 0) return ReadOnlyRoots(isolate).false_value();
 
   int64_t index = 0;
@@ -203,7 +203,7 @@ BUILTIN(TypedArrayPrototypeIndexOf) {
   ASSIGN_RETURN_FAILURE_ON_EXCEPTION(
       isolate, array, JSTypedArray::Validate(isolate, args.receiver(), method));
 
-  int64_t len = array->length_value();
+  int64_t len = array->length();
   if (len == 0) return Smi::FromInt(-1);
 
   int64_t index = 0;
@@ -234,7 +234,7 @@ BUILTIN(TypedArrayPrototypeLastIndexOf) {
   ASSIGN_RETURN_FAILURE_ON_EXCEPTION(
       isolate, array, JSTypedArray::Validate(isolate, args.receiver(), method));
 
-  int64_t len = array->length_value();
+  int64_t len = array->length();
   if (len == 0) return Smi::FromInt(-1);
 
   int64_t index = len - 1;

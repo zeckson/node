@@ -85,10 +85,6 @@ consts_misc = [
     { 'name': 'SmiTagMask',             'value': 'kSmiTagMask' },
     { 'name': 'SmiValueShift',          'value': 'kSmiTagSize' },
     { 'name': 'SmiShiftSize',           'value': 'kSmiShiftSize' },
-    { 'name': 'SystemPointerSize',      'value': 'kSystemPointerSize' },
-    { 'name': 'SystemPointerSizeLog2',  'value': 'kSystemPointerSizeLog2' },
-    { 'name': 'TaggedSize',             'value': 'kTaggedSize' },
-    { 'name': 'TaggedSizeLog2',         'value': 'kTaggedSizeLog2' },
 
     { 'name': 'OddballFalse',           'value': 'Oddball::kFalse' },
     { 'name': 'OddballTrue',            'value': 'Oddball::kTrue' },
@@ -165,8 +161,6 @@ consts_misc = [
         'value': 'Map::NumberOfOwnDescriptorsBits::kMask' },
     { 'name': 'bit_field3_number_of_own_descriptors_shift',
         'value': 'Map::NumberOfOwnDescriptorsBits::kShift' },
-    { 'name': 'class_Map__instance_descriptors_offset',
-        'value': 'Map::kDescriptorsOffset' },
 
     { 'name': 'off_fp_context_or_frame_type',
         'value': 'CommonFrameConstants::kContextOrFrameTypeOffset'},
@@ -305,8 +299,8 @@ header = '''
  */
 
 #include "src/v8.h"
-#include "src/frames.h"
-#include "src/frames-inl.h" /* for architecture-specific frame constants */
+#include "src/execution/frames.h"
+#include "src/execution/frames-inl.h" /* for architecture-specific frame constants */
 #include "src/contexts.h"
 #include "src/objects.h"
 #include "src/objects/data-handler.h"
@@ -399,14 +393,20 @@ def load_objects_from_file(objfilename, checktypes):
                         typestr += line;
                         continue;
 
-                match = re.match('class (\w[^:]*)(: public (\w[^{]*))?\s*{\s*',
-                    line);
+                match = re.match(r'class(?:\s+V8_EXPORT(?:_PRIVATE)?)?'
+                                 r'\s+(\w[^:]*)'
+                                 r'(?:: public (\w[^{]*))?\s*{\s*',
+                                 line);
 
                 if (match):
                         klass = match.group(1).strip();
-                        pklass = match.group(3);
+                        pklass = match.group(2);
                         if (pklass):
-                                pklass = pklass.strip();
+                                # Strip potential template arguments from parent
+                                # class.
+                                match = re.match(r'(\w+)(<.*>)?', pklass.strip());
+                                pklass = match.group(1).strip();
+
                         klasses[klass] = { 'parent': pklass };
 
         #

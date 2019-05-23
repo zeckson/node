@@ -19,7 +19,7 @@
 #include "src/objects/js-objects.h"
 #include "src/objects/literal-objects.h"
 #include "src/profiler/strings-storage.h"
-#include "src/string-hasher.h"
+#include "src/strings/string-hasher.h"
 #include "src/visitors.h"
 
 namespace v8 {
@@ -146,8 +146,8 @@ class HeapEntry {
                                   const char* description, HeapEntry* child,
                                   StringsStorage* strings);
 
-  void Print(
-      const char* prefix, const char* edge_name, int max_depth, int indent);
+  V8_EXPORT_PRIVATE void Print(const char* prefix, const char* edge_name,
+                               int max_depth, int indent);
 
  private:
   V8_INLINE std::vector<HeapGraphEdge*>::iterator children_begin() const;
@@ -311,7 +311,7 @@ class SnapshottingProgressReportingInterface {
 };
 
 // An implementation of V8 heap graph extractor.
-class V8HeapExplorer : public HeapEntriesAllocator {
+class V8_EXPORT_PRIVATE V8HeapExplorer : public HeapEntriesAllocator {
  public:
   V8HeapExplorer(HeapSnapshot* snapshot,
                  SnapshottingProgressReportingInterface* progress,

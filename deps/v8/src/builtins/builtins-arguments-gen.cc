@@ -4,13 +4,13 @@
 
 #include "src/builtins/builtins-arguments-gen.h"
 
-#include "src/arguments.h"
 #include "src/builtins/builtins-utils-gen.h"
 #include "src/builtins/builtins.h"
-#include "src/code-factory.h"
-#include "src/code-stub-assembler.h"
-#include "src/frame-constants.h"
-#include "src/interface-descriptors.h"
+#include "src/codegen/code-factory.h"
+#include "src/codegen/code-stub-assembler.h"
+#include "src/codegen/interface-descriptors.h"
+#include "src/execution/arguments.h"
+#include "src/execution/frame-constants.h"
 #include "src/objects-inl.h"
 #include "src/objects/arguments.h"
 
@@ -112,7 +112,7 @@ Node* ArgumentsBuiltinsAssembler::EmitFastNewRestParameter(Node* context,
   ParameterMode mode = OptimalParameterMode();
   Node* zero = IntPtrOrSmiConstant(0, mode);
 
-  ArgumentsBuiltinsFromDSLAssembler::ArgumentsInfo info =
+  TorqueGeneratedArgumentsBuiltinsAssembler::ArgumentsInfo info =
       GetArgumentsFrameAndCount(CAST(context),
                                 UncheckedCast<JSFunction>(function));
 
@@ -167,7 +167,7 @@ Node* ArgumentsBuiltinsAssembler::EmitFastNewStrictArguments(Node* context,
   ParameterMode mode = OptimalParameterMode();
   Node* zero = IntPtrOrSmiConstant(0, mode);
 
-  ArgumentsBuiltinsFromDSLAssembler::ArgumentsInfo info =
+  TorqueGeneratedArgumentsBuiltinsAssembler::ArgumentsInfo info =
       GetArgumentsFrameAndCount(CAST(context),
                                 UncheckedCast<JSFunction>(function));
 
@@ -216,7 +216,7 @@ Node* ArgumentsBuiltinsAssembler::EmitFastNewSloppyArguments(Node* context,
   Label done(this, &result), empty(this), no_parameters(this),
       runtime(this, Label::kDeferred);
 
-  ArgumentsBuiltinsFromDSLAssembler::ArgumentsInfo info =
+  TorqueGeneratedArgumentsBuiltinsAssembler::ArgumentsInfo info =
       GetArgumentsFrameAndCount(CAST(context),
                                 UncheckedCast<JSFunction>(function));
 

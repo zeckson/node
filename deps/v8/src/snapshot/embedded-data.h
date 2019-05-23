@@ -7,8 +7,8 @@
 
 #include "src/base/macros.h"
 #include "src/builtins/builtins.h"
+#include "src/execution/isolate.h"
 #include "src/globals.h"
-#include "src/isolate.h"
 
 namespace v8 {
 namespace internal {
@@ -56,6 +56,9 @@ class EmbeddedData final {
 
   Address InstructionStartOfBuiltin(int i) const;
   uint32_t InstructionSizeOfBuiltin(int i) const;
+
+  Address InstructionStartOfBytecodeHandlers() const;
+  Address InstructionEndOfBytecodeHandlers() const;
 
   bool ContainsBuiltin(int i) const { return InstructionSizeOfBuiltin(i) > 0; }
 

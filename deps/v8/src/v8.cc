@@ -6,23 +6,23 @@
 
 #include <fstream>
 
-#include "src/api.h"
+#include "src/api/api.h"
 #include "src/base/atomicops.h"
 #include "src/base/once.h"
 #include "src/base/platform/platform.h"
-#include "src/bootstrapper.h"
-#include "src/cpu-features.h"
+#include "src/codegen/cpu-features.h"
+#include "src/codegen/interface-descriptors.h"
 #include "src/debug/debug.h"
-#include "src/deoptimizer.h"
-#include "src/elements.h"
-#include "src/frames.h"
-#include "src/interface-descriptors.h"
-#include "src/isolate.h"
+#include "src/deoptimizer/deoptimizer.h"
+#include "src/execution/frames.h"
+#include "src/execution/isolate.h"
+#include "src/execution/runtime-profiler.h"
+#include "src/execution/simulator.h"
+#include "src/init/bootstrapper.h"
 #include "src/libsampler/sampler.h"
 #include "src/objects-inl.h"
+#include "src/objects/elements.h"
 #include "src/profiler/heap-profiler.h"
-#include "src/runtime-profiler.h"
-#include "src/simulator.h"
 #include "src/snapshot/natives.h"
 #include "src/snapshot/snapshot.h"
 #include "src/tracing/tracing-category-observer.h"
@@ -88,7 +88,7 @@ void V8::InitializeOncePerProcessImpl() {
   // continue exposing wasm on correctness fuzzers even in jitless mode.
   // TODO(jgruber): Remove this once / if wasm can run without executable
   // memory.
-  if (FLAG_jitless && !FLAG_abort_on_stack_or_string_length_overflow) {
+  if (FLAG_jitless && !FLAG_correctness_fuzzer_suppressions) {
     FLAG_expose_wasm = false;
   }
 

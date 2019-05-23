@@ -6,8 +6,8 @@
 #define V8_BUILTINS_BUILTINS_DESCRIPTORS_H_
 
 #include "src/builtins/builtins.h"
+#include "src/codegen/interface-descriptors.h"
 #include "src/compiler/code-assembler.h"
-#include "src/interface-descriptors.h"
 #include "src/objects/shared-function-info.h"
 
 namespace v8 {
@@ -43,7 +43,7 @@ namespace internal {
 #define DEFINE_ASM_INTERFACE_DESCRIPTOR(Name, InterfaceDescriptor) \
   typedef InterfaceDescriptor##Descriptor Builtin_##Name##_InterfaceDescriptor;
 
-BUILTIN_LIST(IGNORE_BUILTIN, IGNORE_BUILTIN, DEFINE_TFJ_INTERFACE_DESCRIPTOR,
+BUILTIN_LIST(IGNORE_BUILTIN, DEFINE_TFJ_INTERFACE_DESCRIPTOR,
              DEFINE_TFC_INTERFACE_DESCRIPTOR, DEFINE_TFS_INTERFACE_DESCRIPTOR,
              DEFINE_TFH_INTERFACE_DESCRIPTOR, IGNORE_BUILTIN,
              DEFINE_ASM_INTERFACE_DESCRIPTOR)

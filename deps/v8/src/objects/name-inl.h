@@ -52,12 +52,10 @@ bool Name::IsUniqueName() const {
   return result;
 }
 
-uint32_t Name::hash_field() {
-  return READ_UINT32_FIELD(*this, kHashFieldOffset);
-}
+uint32_t Name::hash_field() { return ReadField<uint32_t>(kHashFieldOffset); }
 
 void Name::set_hash_field(uint32_t value) {
-  WRITE_UINT32_FIELD(*this, kHashFieldOffset, value);
+  WriteField<uint32_t>(kHashFieldOffset, value);
 }
 
 bool Name::Equals(Name other) {

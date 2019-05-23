@@ -95,7 +95,7 @@ class StatsCounter;
   V(address_of_mock_arraybuffer_allocator_flag,                               \
     "FLAG_mock_arraybuffer_allocator")                                        \
   V(address_of_one_half, "LDoubleConstant::one_half")                         \
-  V(address_of_runtime_stats_flag, "FLAG_runtime_stats")                      \
+  V(address_of_runtime_stats_flag, "TracingFlags::runtime_stats")             \
   V(address_of_the_hole_nan, "the_hole_nan")                                  \
   V(address_of_uint32_bias, "uint32_bias")                                    \
   V(bytecode_size_table_address, "Bytecodes::bytecode_size_table_address")    \
@@ -109,6 +109,8 @@ class StatsCounter;
     "copy_typed_array_elements_to_typed_array")                               \
   V(cpu_features, "cpu_features")                                             \
   V(delete_handle_scope_extensions, "HandleScope::DeleteExtensions")          \
+  V(ephemeron_key_write_barrier_function,                                     \
+    "Heap::EphemeronKeyWriteBarrierFromCode")                                 \
   V(f64_acos_wrapper_function, "f64_acos_wrapper")                            \
   V(f64_asin_wrapper_function, "f64_asin_wrapper")                            \
   V(f64_mod_wrapper_function, "f64_mod_wrapper")                              \
@@ -148,8 +150,6 @@ class StatsCounter;
   V(libc_memcpy_function, "libc_memcpy")                                      \
   V(libc_memmove_function, "libc_memmove")                                    \
   V(libc_memset_function, "libc_memset")                                      \
-  V(log_enter_external_function, "Logger::EnterExternal")                     \
-  V(log_leave_external_function, "Logger::LeaveExternal")                     \
   V(mod_two_doubles_operation, "mod_two_doubles")                             \
   V(new_deoptimizer_function, "Deoptimizer::New()")                           \
   V(orderedhashmap_gethash_raw, "orderedhashmap_gethash_raw")                 \
@@ -286,9 +286,10 @@ class ExternalReference {
   template <typename SubjectChar, typename PatternChar>
   static ExternalReference search_string_raw();
 
-  static ExternalReference FromRawAddress(Address address);
+  V8_EXPORT_PRIVATE static ExternalReference FromRawAddress(Address address);
 
-#define DECL_EXTERNAL_REFERENCE(name, desc) static ExternalReference name();
+#define DECL_EXTERNAL_REFERENCE(name, desc) \
+  V8_EXPORT_PRIVATE static ExternalReference name();
   EXTERNAL_REFERENCE_LIST(DECL_EXTERNAL_REFERENCE)
 #undef DECL_EXTERNAL_REFERENCE
 

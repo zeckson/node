@@ -7,8 +7,8 @@
 
 #include "src/base/compiler-specific.h"
 #include "src/compiler/simplified-operator.h"
-#include "src/elements-kind.h"
-#include "src/globals.h"
+#include "src/compiler/write-barrier-kind.h"
+#include "src/objects/elements-kind.h"
 #include "src/objects/js-objects.h"
 
 namespace v8 {
@@ -24,8 +24,8 @@ class V8_EXPORT_PRIVATE AccessBuilder final
   // ===========================================================================
   // Access to external values (based on external references).
 
-  // Provides access to an intptr field identified by an external reference.
-  static FieldAccess ForExternalIntPtr();
+  // Provides access to a tagged field identified by an external reference.
+  static FieldAccess ForExternalTaggedValue();
 
   // Provides access to an uint8 field identified by an external reference.
   static FieldAccess ForExternalUint8Value();
@@ -136,6 +136,9 @@ class V8_EXPORT_PRIVATE AccessBuilder final
 
   // Provides access to JSTypedArray::length() field.
   static FieldAccess ForJSTypedArrayLength();
+
+  // Provides access to JSDataView::data_pointer() field.
+  static FieldAccess ForJSDataViewDataPointer();
 
   // Provides access to JSDate::value() field.
   static FieldAccess ForJSDateValue();

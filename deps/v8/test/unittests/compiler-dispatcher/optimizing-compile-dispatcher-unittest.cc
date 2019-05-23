@@ -4,14 +4,14 @@
 
 #include "src/compiler-dispatcher/optimizing-compile-dispatcher.h"
 
-#include "src/api-inl.h"
+#include "src/api/api-inl.h"
 #include "src/base/atomic-utils.h"
 #include "src/base/platform/semaphore.h"
-#include "src/compiler.h"
+#include "src/codegen/compiler.h"
+#include "src/codegen/optimized-compilation-info.h"
+#include "src/execution/isolate.h"
 #include "src/handles.h"
-#include "src/isolate.h"
 #include "src/objects-inl.h"
-#include "src/optimized-compilation-info.h"
 #include "src/parsing/parse-info.h"
 #include "test/unittests/test-helpers.h"
 #include "test/unittests/test-utils.h"

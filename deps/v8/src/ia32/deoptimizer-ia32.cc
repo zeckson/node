@@ -4,11 +4,11 @@
 
 #if V8_TARGET_ARCH_IA32
 
-#include "src/deoptimizer.h"
-#include "src/frame-constants.h"
-#include "src/macro-assembler.h"
-#include "src/register-configuration.h"
-#include "src/safepoint-table.h"
+#include "src/codegen/macro-assembler.h"
+#include "src/codegen/register-configuration.h"
+#include "src/codegen/safepoint-table.h"
+#include "src/deoptimizer/deoptimizer.h"
+#include "src/execution/frame-constants.h"
 
 namespace v8 {
 namespace internal {
@@ -24,7 +24,7 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
   const int kNumberOfRegisters = Register::kNumRegisters;
 
   const int kDoubleRegsSize = kDoubleSize * XMMRegister::kNumRegisters;
-  __ sub(esp, Immediate(kDoubleRegsSize));
+  __ AllocateStackSpace(kDoubleRegsSize);
   const RegisterConfiguration* config = RegisterConfiguration::Default();
   for (int i = 0; i < config->num_allocatable_double_registers(); ++i) {
     int code = config->GetAllocatableDoubleCode(i);
@@ -35,7 +35,7 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
 
   STATIC_ASSERT(kFloatSize == kSystemPointerSize);
   const int kFloatRegsSize = kFloatSize * XMMRegister::kNumRegisters;
-  __ sub(esp, Immediate(kFloatRegsSize));
+  __ AllocateStackSpace(kFloatRegsSize);
   for (int i = 0; i < config->num_allocatable_float_registers(); ++i) {
     int code = config->GetAllocatableFloatCode(i);
     XMMRegister xmm_reg = XMMRegister::from_code(code);

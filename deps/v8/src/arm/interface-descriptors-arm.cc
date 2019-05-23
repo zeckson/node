@@ -4,9 +4,9 @@
 
 #if V8_TARGET_ARCH_ARM
 
-#include "src/interface-descriptors.h"
+#include "src/codegen/interface-descriptors.h"
 
-#include "src/frames.h"
+#include "src/execution/frames.h"
 
 namespace v8 {
 namespace internal {
@@ -23,6 +23,18 @@ void CallInterfaceDescriptor::DefaultInitializePlatformSpecific(
 }
 
 void RecordWriteDescriptor::InitializePlatformSpecific(
+    CallInterfaceDescriptorData* data) {
+  const Register default_stub_registers[] = {r0, r1, r2, r3, r4};
+
+  data->RestrictAllocatableRegisters(default_stub_registers,
+                                     arraysize(default_stub_registers));
+
+  CHECK_LE(static_cast<size_t>(kParameterCount),
+           arraysize(default_stub_registers));
+  data->InitializePlatformSpecific(kParameterCount, default_stub_registers);
+}
+
+void EphemeronKeyBarrierDescriptor::InitializePlatformSpecific(
     CallInterfaceDescriptorData* data) {
   const Register default_stub_registers[] = {r0, r1, r2, r3, r4};
 

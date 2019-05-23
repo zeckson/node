@@ -5,8 +5,8 @@
 #ifndef V8_PPC_REGISTER_PPC_H_
 #define V8_PPC_REGISTER_PPC_H_
 
-#include "src/register.h"
-#include "src/reglist.h"
+#include "src/codegen/register.h"
+#include "src/codegen/reglist.h"
 
 namespace v8 {
 namespace internal {
@@ -145,7 +145,8 @@ const int kNumSafepointRegisters = 32;
 // The following constants describe the stack frame linkage area as
 // defined by the ABI.  Note that kNumRequiredStackFrameSlots must
 // satisfy alignment requirements (rounding up if required).
-#if V8_TARGET_ARCH_PPC64 && V8_TARGET_LITTLE_ENDIAN  // ppc64le linux
+#if V8_TARGET_ARCH_PPC64 && (V8_TARGET_LITTLE_ENDIAN || \
+    (defined(_CALL_ELF) && _CALL_ELF == 2)) // ELFv2 ABI
 // [0] back chain
 // [1] condition register save area
 // [2] link register save area

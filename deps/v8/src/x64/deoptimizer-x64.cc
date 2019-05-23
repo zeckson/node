@@ -4,11 +4,11 @@
 
 #if V8_TARGET_ARCH_X64
 
-#include "src/deoptimizer.h"
-#include "src/macro-assembler.h"
+#include "src/codegen/macro-assembler.h"
+#include "src/codegen/register-configuration.h"
+#include "src/codegen/safepoint-table.h"
+#include "src/deoptimizer/deoptimizer.h"
 #include "src/objects-inl.h"
-#include "src/register-configuration.h"
-#include "src/safepoint-table.h"
 
 namespace v8 {
 namespace internal {
@@ -24,7 +24,7 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
   const int kNumberOfRegisters = Register::kNumRegisters;
 
   const int kDoubleRegsSize = kDoubleSize * XMMRegister::kNumRegisters;
-  __ subq(rsp, Immediate(kDoubleRegsSize));
+  __ AllocateStackSpace(kDoubleRegsSize);
 
   const RegisterConfiguration* config = RegisterConfiguration::Default();
   for (int i = 0; i < config->num_allocatable_double_registers(); ++i) {
@@ -35,7 +35,7 @@ void Deoptimizer::GenerateDeoptimizationEntries(MacroAssembler* masm,
   }
 
   const int kFloatRegsSize = kFloatSize * XMMRegister::kNumRegisters;
-  __ subq(rsp, Immediate(kFloatRegsSize));
+  __ AllocateStackSpace(kFloatRegsSize);
 
   for (int i = 0; i < config->num_allocatable_float_registers(); ++i) {
     int code = config->GetAllocatableFloatCode(i);

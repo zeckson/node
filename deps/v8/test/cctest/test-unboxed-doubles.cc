@@ -7,23 +7,23 @@
 
 #include "src/v8.h"
 
-#include "src/accessors.h"
-#include "src/api-inl.h"
+#include "src/api/api-inl.h"
 #include "src/base/overflowing-math.h"
-#include "src/compilation-cache.h"
-#include "src/execution.h"
-#include "src/field-type.h"
+#include "src/builtins/accessors.h"
+#include "src/codegen/compilation-cache.h"
+#include "src/execution/execution.h"
 #include "src/global-handles.h"
 #include "src/heap/factory.h"
 #include "src/heap/heap-inl.h"
 #include "src/heap/incremental-marking.h"
 #include "src/heap/spaces.h"
 #include "src/ic/ic.h"
-#include "src/layout-descriptor.h"
 #include "src/objects-inl.h"
 #include "src/objects/api-callbacks.h"
+#include "src/objects/field-type.h"
 #include "src/objects/heap-number-inl.h"
-#include "src/property.h"
+#include "src/objects/layout-descriptor.h"
+#include "src/objects/property.h"
 #include "test/cctest/cctest.h"
 #include "test/cctest/heap/heap-utils.h"
 
@@ -55,7 +55,7 @@ static Handle<String> MakeString(const char* str) {
 static Handle<String> MakeName(const char* str, int suffix) {
   EmbeddedVector<char, 128> buffer;
   SNPrintF(buffer, "%s%d", str, suffix);
-  return MakeString(buffer.start());
+  return MakeString(buffer.begin());
 }
 
 
@@ -112,7 +112,7 @@ static Handle<DescriptorArray> CreateDescriptorArray(Isolate* isolate,
   for (int i = 0; i < kPropsCount; i++) {
     EmbeddedVector<char, 64> buffer;
     SNPrintF(buffer, "prop%d", i);
-    Handle<String> name = factory->InternalizeUtf8String(buffer.start());
+    Handle<String> name = factory->InternalizeUtf8String(buffer.begin());
 
     TestPropertyKind kind = props[i];
 
@@ -656,7 +656,7 @@ static Handle<LayoutDescriptor> TestLayoutDescriptorAppend(
   for (int i = 0; i < kPropsCount; i++) {
     EmbeddedVector<char, 64> buffer;
     SNPrintF(buffer, "prop%d", i);
-    Handle<String> name = factory->InternalizeUtf8String(buffer.start());
+    Handle<String> name = factory->InternalizeUtf8String(buffer.begin());
 
     Handle<LayoutDescriptor> layout_descriptor;
     TestPropertyKind kind = props[i];
@@ -955,7 +955,8 @@ TEST(Regress436816) {
       LayoutDescriptor::New(isolate, map, descriptors, kPropsCount);
   map->InitializeDescriptors(isolate, *descriptors, *layout_descriptor);
 
-  Handle<JSObject> object = factory->NewJSObjectFromMap(map, TENURED);
+  Handle<JSObject> object =
+      factory->NewJSObjectFromMap(map, AllocationType::kOld);
 
   Address fake_address = static_cast<Address>(~kHeapObjectTagMask);
   HeapObject fake_object = HeapObject::FromAddress(fake_address);
@@ -1092,7 +1093,8 @@ TEST(DoScavenge) {
             .ToHandleChecked();
 
   // Create object in new space.
-  Handle<JSObject> obj = factory->NewJSObjectFromMap(map, NOT_TENURED);
+  Handle<JSObject> obj =
+      factory->NewJSObjectFromMap(map, AllocationType::kYoung);
 
   Handle<HeapNumber> heap_number = factory->NewHeapNumber(42.5);
   WriteToField(*obj, 0, *heap_number);
@@ -1166,12 +1168,14 @@ TEST(DoScavengeWithIncrementalWriteBarrier) {
     AlwaysAllocateScope always_allocate(isolate);
     // Make sure |obj_value| is placed on an old-space evacuation candidate.
     heap::SimulateFullSpace(old_space);
-    obj_value = factory->NewJSArray(32 * KB, HOLEY_ELEMENTS, TENURED);
+    obj_value =
+        factory->NewJSArray(32 * KB, HOLEY_ELEMENTS, AllocationType::kOld);
     ec_page = Page::FromHeapObject(*obj_value);
   }
 
   // Create object in new space.
-  Handle<JSObject> obj = factory->NewJSObjectFromMap(map, NOT_TENURED);
+  Handle<JSObject> obj =
+      factory->NewJSObjectFromMap(map, AllocationType::kYoung);
 
   Handle<HeapNumber> heap_number = factory->NewHeapNumber(42.5);
   WriteToField(*obj, 0, *heap_number);
@@ -1449,7 +1453,7 @@ static void TestWriteBarrier(Handle<Map> map, Handle<Map> new_map,
   Handle<HeapObject> obj_value;
   {
     AlwaysAllocateScope always_allocate(isolate);
-    obj = factory->NewJSObjectFromMap(map, TENURED);
+    obj = factory->NewJSObjectFromMap(map, AllocationType::kOld);
     CHECK(old_space->Contains(*obj));
 
     obj_value = factory->NewHeapNumber(0.);
@@ -1514,12 +1518,13 @@ static void TestIncrementalWriteBarrier(Handle<Map> map, Handle<Map> new_map,
   Page* ec_page;
   {
     AlwaysAllocateScope always_allocate(isolate);
-    obj = factory->NewJSObjectFromMap(map, TENURED);
+    obj = factory->NewJSObjectFromMap(map, AllocationType::kOld);
     CHECK(old_space->Contains(*obj));
 
     // Make sure |obj_value| is placed on an old-space evacuation candidate.
     heap::SimulateFullSpace(old_space);
-    obj_value = factory->NewJSArray(32 * KB, HOLEY_ELEMENTS, TENURED);
+    obj_value =
+        factory->NewJSArray(32 * KB, HOLEY_ELEMENTS, AllocationType::kOld);
     ec_page = Page::FromHeapObject(*obj_value);
     CHECK_NE(ec_page, Page::FromHeapObject(*obj));
   }

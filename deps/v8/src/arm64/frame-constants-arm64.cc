@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/frame-constants.h"
+#include "src/execution/frame-constants.h"
 
 #if V8_TARGET_ARCH_ARM64
 
 #include "src/arm64/assembler-arm64-inl.h"
 #include "src/arm64/assembler-arm64.h"
-#include "src/assembler.h"
+#include "src/codegen/assembler.h"
 
 #include "src/arm64/frame-constants-arm64.h"
 

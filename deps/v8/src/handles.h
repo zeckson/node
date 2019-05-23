@@ -57,13 +57,6 @@ class HandleBase {
   // used for hashing handles; do not ever try to dereference it.
   V8_INLINE Address address() const { return bit_cast<Address>(location_); }
 
- protected:
-  // Provides the C++ dereference operator.
-  V8_INLINE Address operator*() const {
-    SLOW_DCHECK(IsDereferenceAllowed(INCLUDE_DEFERRED_CHECK));
-    return *location_;
-  }
-
   // Returns the address to where the raw pointer is stored.
   V8_INLINE Address* location() const {
     SLOW_DCHECK(location_ == nullptr ||
@@ -71,6 +64,7 @@ class HandleBase {
     return location_;
   }
 
+ protected:
   enum DereferenceCheckMode { INCLUDE_DEFERRED_CHECK, NO_DEFERRED_CHECK };
 #ifdef DEBUG
   bool V8_EXPORT_PRIVATE IsDereferenceAllowed(DereferenceCheckMode mode) const;
@@ -87,7 +81,6 @@ class HandleBase {
   Address* location_;
 };
 
-
 // ----------------------------------------------------------------------------
 // A Handle provides a reference to an object that survives relocation by
 // the garbage collector.
@@ -102,6 +95,22 @@ class HandleBase {
 template <typename T>
 class Handle final : public HandleBase {
  public:
+  // {ObjectRef} is returned by {Handle::operator->}. It should never be stored
+  // anywhere or used in any other code; no one should ever have to spell out
+  // {ObjectRef} in code. Its only purpose is to be dereferenced immediately by
+  // "operator-> chaining". Returning the address of the field is valid because
+  // this objects lifetime only ends at the end of the full statement.
+  class ObjectRef {
+   public:
+    T* operator->() { return &object_; }
+
+   private:
+    friend class Handle;
+    explicit ObjectRef(T object) : object_(object) {}
+
+    T object_;
+  };
+
   V8_INLINE explicit Handle(Address* location = nullptr)
       : HandleBase(location) {
     // Type check:
@@ -121,19 +130,14 @@ class Handle final : public HandleBase {
                             std::is_convertible<S*, T*>::value>::type>
   V8_INLINE Handle(Handle<S> handle) : HandleBase(handle) {}
 
-  V8_INLINE T operator->() const {
-    return operator*();
-  }
+  V8_INLINE ObjectRef operator->() const { return ObjectRef{**this}; }
 
-  // Provides the C++ dereference operator.
   V8_INLINE T operator*() const {
     // unchecked_cast because we rather trust Handle<T> to contain a T than
     // include all the respective -inl.h headers for SLOW_DCHECKs.
-    return T::unchecked_cast(Object(HandleBase::operator*()));
+    SLOW_DCHECK(IsDereferenceAllowed(INCLUDE_DEFERRED_CHECK));
+    return T::unchecked_cast(Object(*location()));
   }
-
-  // Returns the address to where the raw pointer is stored.
-  V8_INLINE Address* location() const { return HandleBase::location(); }
 
   template <typename S>
   inline static const Handle<T> cast(Handle<S> that);
@@ -187,8 +191,11 @@ inline std::ostream& operator<<(std::ostream& os, Handle<T> handle);
 class HandleScope {
  public:
   explicit inline HandleScope(Isolate* isolate);
+  inline HandleScope(HandleScope&& other) V8_NOEXCEPT;
 
   inline ~HandleScope();
+
+  inline HandleScope& operator=(HandleScope&& other) V8_NOEXCEPT;
 
   // Counts the number of allocated handles.
   V8_EXPORT_PRIVATE static int NumberOfHandles(Isolate* isolate);
@@ -250,12 +257,10 @@ class HandleScope {
   DISALLOW_COPY_AND_ASSIGN(HandleScope);
 };
 
-
 // Forward declarations for CanonicalHandleScope.
 template <typename V, class AllocationPolicy>
 class IdentityMap;
 class RootIndexMap;
-
 
 // A CanonicalHandleScope does not open a new HandleScope. It changes the
 // existing HandleScope so that Handles created within are canonicalized.
@@ -324,7 +329,6 @@ class V8_EXPORT_PRIVATE DeferredHandleScope final {
   friend class HandleScopeImplementer;
 };
 
-
 // Seal off the current HandleScope so that new handles can only be created
 // if a new HandleScope is entered.
 class SealHandleScope final {
@@ -335,13 +339,13 @@ class SealHandleScope final {
 #else
   explicit inline SealHandleScope(Isolate* isolate);
   inline ~SealHandleScope();
+
  private:
   Isolate* isolate_;
   Address* prev_limit_;
   int prev_sealed_level_;
 #endif
 };
-
 
 struct HandleScopeData final {
   Address* next;
