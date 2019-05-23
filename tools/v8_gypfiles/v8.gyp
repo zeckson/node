@@ -407,9 +407,10 @@
         'mksnapshot',
         'v8_maybe_icu',
 
+        # [GYP] added explicitly, instead of inheriting from the other deps
         'v8_base_without_compiler',
         'v8_compiler_for_mksnapshot',
-        'v8_init',
+        'v8_initializers',
         'v8_libbase',
         'v8_libplatform',
       ],
@@ -1159,13 +1160,13 @@
         ['is_component_build', {
           'defines': [ "BUILDING_V8_BASE_SHARED" ],
         }],
-        ['is_posix or OS == "fuchsia"', {
+        ['is_posix or is_fuchsia', {
           'sources': [
             '<(V8_ROOT)/src/base/platform/platform-posix.cc',
             '<(V8_ROOT)/src/base/platform/platform-posix.h',
           ],
           'conditions': [
-            ['OS != "aix"', {
+            ['OS != "aix" and OS != "solaris"', {
               'sources': [
                 '<(V8_ROOT)/src/base/platform/platform-posix-time.cc',
                 '<(V8_ROOT)/src/base/platform/platform-posix-time.h',
@@ -1197,7 +1198,7 @@
             ],
           },
         }],
-        ['OS=="android"', {
+        ['is_android', {
           'sources': [
             '<(V8_ROOT)/src/base/debug/stack_trace_android.cc',
             '<(V8_ROOT)/src/base/platform/platform-posix.cc',
@@ -1238,7 +1239,7 @@
             }],
           ],
         }],
-        ['OS == "fuchsia"', {
+        ['is_fuchsia', {
           'sources': [
             '<(V8_ROOT)/src/base/debug/stack_trace_fuchsia.cc',
             '<(V8_ROOT)/src/base/platform/platform-fuchsia.cc',
@@ -1250,7 +1251,7 @@
             '<(V8_ROOT)/src/base/platform/platform-macos.cc',
           ]},
         ],
-        ['OS=="win"', {
+        ['is_win', {
           'sources': [
             '<(V8_ROOT)/src/base/debug/stack_trace_win.cc',
             '<(V8_ROOT)/src/base/platform/platform-win32.cc',
@@ -1278,6 +1279,20 @@
           # ],
         }],
         # end of conditions from 'BUILD.gn'
+
+        # Node.js validated
+        ['OS=="solaris"', {
+          'link_settings': {
+            'libraries': [
+              '-lnsl',
+              '-lrt',
+            ]},
+          'sources': [
+            '<(V8_ROOT)/src/base/debug/stack_trace_posix.cc',
+            '<(V8_ROOT)/src/base/platform/platform-solaris.cc',
+          ],
+        }],
+
         # YMMV with the following conditions
         ['OS=="qnx"', {
             'link_settings': {
@@ -1363,19 +1378,6 @@
               '<(V8_ROOT)/src/base/platform/platform-posix.cc',
               '<(V8_ROOT)/src/base/platform/platform-posix-time.h',
               '<(V8_ROOT)/src/base/platform/platform-posix-time.cc',
-            ],
-          }
-        ],
-        ['OS=="solaris"', {
-            'link_settings': {
-              'libraries': [
-                '-lnsl -lrt',
-            ]},
-            'sources': [
-              '<(V8_ROOT)/src/base/debug/stack_trace_posix.cc',
-              '<(V8_ROOT)/src/base/platform/platform-solaris.cc',
-              '<(V8_ROOT)/src/base/platform/platform-posix.h',
-              '<(V8_ROOT)/src/base/platform/platform-posix.cc',
             ],
           }
         ],
